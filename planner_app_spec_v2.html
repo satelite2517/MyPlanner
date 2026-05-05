@@ -1,0 +1,177 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.spec { font-family: var(--font-sans); padding: 0 0 2rem; }
+.spec-title { font-size: 20px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.spec-sub { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 2rem; }
+.section { margin-bottom: 1.5rem; }
+.section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; border-bottom: 0.5px solid var(--color-border-tertiary); padding-bottom: 8px; }
+.section-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.badge-purple { background: #EEEDFE; color: #3C3489; }
+.badge-green { background: #E1F5EE; color: #085041; }
+.badge-amber { background: #FAEEDA; color: #633806; }
+.badge-gray { background: #F1EFE8; color: #444441; }
+.badge-teal { background: #E1F5EE; color: #0F6E56; }
+.badge-coral { background: #FAECE7; color: #993C1D; }
+.badge-new { background: #534AB7; color: #EEEDFE; font-size: 10px; padding: 1px 6px; border-radius: 6px; vertical-align: middle; margin-left: 4px; }
+.row { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+.row-label { font-size: 12px; color: var(--color-text-secondary); min-width: 100px; flex-shrink: 0; padding-top: 1px; }
+.row-value { font-size: 12px; color: var(--color-text-primary); flex: 1; line-height: 1.6; }
+.tag { display: inline-block; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--color-text-secondary); margin: 2px 2px 0 0; }
+.tag-new { display: inline-block; background: #EEEDFE; border: 0.5px solid #AFA9EC; border-radius: 6px; padding: 2px 8px; font-size: 11px; color: #3C3489; margin: 2px 2px 0 0; }
+.tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tab-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px 14px; }
+.tab-card-num { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.tab-card-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 8px; }
+.tab-card-item { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px; display: flex; align-items: flex-start; gap: 5px; }
+.tab-card-item.updated { color: #3C3489; }
+.dot { width: 4px; height: 4px; border-radius: 50%; background: #7F77DD; flex-shrink: 0; margin-top: 5px; }
+.dot-new { width: 4px; height: 4px; border-radius: 50%; background: #534AB7; flex-shrink: 0; margin-top: 5px; }
+.stack-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.stack-row:last-child { border-bottom: none; }
+.stack-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); min-width: 130px; }
+.stack-desc { font-size: 12px; color: var(--color-text-secondary); flex: 1; }
+.concept-box { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px; margin-bottom: 10px; }
+.concept-row { display: flex; gap: 12px; }
+.concept-col { flex: 1; }
+.concept-col-title { font-size: 12px; font-weight: 500; margin-bottom: 6px; padding: 3px 8px; border-radius: 6px; display: inline-block; }
+.concept-col-title.todo { background: #EEEDFE; color: #3C3489; }
+.concept-col-title.deadline { background: #FAEEDA; color: #633806; }
+.concept-item { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px; display: flex; gap: 5px; align-items: flex-start; }
+.divider-v { width: 0.5px; background: var(--color-border-tertiary); flex-shrink: 0; }
+.detail-box { background: #EEEDFE; border-radius: var(--border-radius-lg); padding: 12px 14px; margin-bottom: 8px; }
+.detail-title { font-size: 12px; font-weight: 500; color: #3C3489; margin-bottom: 8px; }
+.detail-item { font-size: 11px; color: #534AB7; margin-bottom: 3px; display: flex; gap: 5px; align-items: flex-start; }
+</style>
+
+<div class="spec">
+  <div class="spec-title">다이어리 플래너 앱 스펙 v2</div>
+  <div class="spec-sub">개인용 iOS + macOS · 업데이트: 항목 구조 명확화 + 상세 뷰 추가</div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-purple">핵심 개념</span>
+      <span class="section-title">두 가지 항목 유형</span>
+    </div>
+    <div class="concept-box">
+      <div class="concept-row">
+        <div class="concept-col">
+          <span class="concept-col-title todo">Todo (할 일)</span>
+          <div class="concept-item"><div class="dot"></div>그날 해야 할 일</div>
+          <div class="concept-item"><div class="dot"></div>완료 체크 가능</div>
+          <div class="concept-item"><div class="dot"></div>미완료 시 다음날 자동 이동</div>
+          <div class="concept-item"><div class="dot"></div>특정 날짜에 귀속</div>
+          <div class="concept-item"><div class="dot"></div>미리 알림 앱 연동</div>
+        </div>
+        <div class="divider-v"></div>
+        <div class="concept-col">
+          <span class="concept-col-title deadline">마감일 (Deadline)</span>
+          <div class="concept-item"><div class="dot" style="background:#BA7517;"></div>기한이 있는 과제/목표</div>
+          <div class="concept-item"><div class="dot" style="background:#BA7517;"></div>마감일 기준으로 표시</div>
+          <div class="concept-item"><div class="dot" style="background:#BA7517;"></div>기간(span) 설정 가능</div>
+          <div class="concept-item"><div class="dot" style="background:#BA7517;"></div>월간 뷰에서 주로 표시</div>
+          <div class="concept-item"><div class="dot" style="background:#BA7517;"></div>캘린더 앱 연동</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-purple">구조</span>
+      <span class="section-title">4개 탭 화면 구성</span>
+    </div>
+    <div class="tab-grid">
+      <div class="tab-card">
+        <div class="tab-card-num">탭 1</div>
+        <div class="tab-card-title">Weekly</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>헤더: "Weekly Todo &amp; Plan"</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>일~토 세로 요일 블럭</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>각 블럭 = <b>Todo 섹션</b> + <b>마감일 섹션</b></div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>블럭 탭 → 상세 뷰 (↓)</div>
+        <div class="tab-card-item"><div class="dot"></div>미완료 → 다음날 자동 이동</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-num">탭 2</div>
+        <div class="tab-card-title">Monthly</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>월력 달력</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>마감일만 달력에 표시</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>기간 있는 항목 span</div>
+        <div class="tab-card-item"><div class="dot"></div>날짜 탭 → 해당일 상세 뷰</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-num">탭 3</div>
+        <div class="tab-card-title">List</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>Todo 섹션 + 마감일 섹션</div>
+        <div class="tab-card-item updated"><div class="dot-new"></div>두 유형 항상 분리 표시</div>
+        <div class="tab-card-item"><div class="dot"></div>날짜 기준 그룹</div>
+        <div class="tab-card-item"><div class="dot"></div>라벨 필터 지원</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-card-num">탭 4</div>
+        <div class="tab-card-title">Me (설정)</div>
+        <div class="tab-card-item"><div class="dot"></div>iCloud 계정</div>
+        <div class="tab-card-item"><div class="dot"></div>캘린더 / 미리 알림 토글</div>
+        <div class="tab-card-item"><div class="dot"></div>언어, 시작 요일, 시간 형식</div>
+        <div class="tab-card-item"><div class="dot"></div>미완료 자동이동 설정</div>
+        <div class="tab-card-item"><div class="dot"></div>라벨 추가 / 관리</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-coral">신규</span>
+      <span class="section-title">요일 블럭 탭 → 상세 뷰</span>
+    </div>
+    <div class="detail-box">
+      <div class="detail-title">날짜 상세 뷰 구성 요소</div>
+      <div class="detail-item"><div class="dot-new"></div>시간단위 타임라인 (시간대별 Plan 표시)</div>
+      <div class="detail-item"><div class="dot-new"></div>Todo 리스트 (체크 가능)</div>
+      <div class="detail-item"><div class="dot-new"></div>마감일 리스트</div>
+      <div class="detail-item"><div class="dot-new"></div>메모 / 노트 (자유 텍스트)</div>
+      <div class="detail-item"><div class="dot-new"></div>링크 첨부 및 공유 (URL 저장 + 탭으로 열기)</div>
+    </div>
+    <div class="row"><div class="row-label">진입 방법</div><div class="row-value">Weekly 화면의 요일 블럭 탭 / Monthly 날짜 탭</div></div>
+    <div class="row"><div class="row-label">링크 공유</div><div class="row-value">URL 저장 → ShareSheet or 탭해서 Safari 열기</div></div>
+    <div class="row"><div class="row-label">메모</div><div class="row-value">날짜별 자유 텍스트, 다이어리처럼 작성 가능</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-green">데이터</span>
+      <span class="section-title">항목 공통 속성</span>
+    </div>
+    <div class="row"><div class="row-label">공통</div><div class="row-value"><span class="tag">제목</span><span class="tag">날짜</span><span class="tag">라벨</span><span class="tag">완료 여부</span><span class="tag">메모</span></div></div>
+    <div class="row"><div class="row-label">Todo 전용</div><div class="row-value"><span class="tag">귀속 날짜</span><span class="tag">자동이동 설정</span><span class="tag-new">미리 알림 연동</span></div></div>
+    <div class="row"><div class="row-label">마감일 전용</div><div class="row-value"><span class="tag">마감 날짜</span><span class="tag">기간 (시작~끝)</span><span class="tag-new">캘린더 연동</span></div></div>
+    <div class="row"><div class="row-label">날짜 상세 전용</div><div class="row-value"><span class="tag-new">메모 / 노트</span><span class="tag-new">링크 URL</span><span class="tag">시간대 계획</span></div></div>
+    <div class="row"><div class="row-label">라벨</div><div class="row-value">사용자 정의, 색상 지정, 모든 항목 유형에 공통 적용, 한/영 지원</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-teal">스택</span>
+      <span class="section-title">기술 스택</span>
+    </div>
+    <div class="stack-row"><div class="stack-name">SwiftUI</div><div class="stack-desc">iOS + macOS UI 코드 공유 (Multiplatform)</div></div>
+    <div class="stack-row"><div class="stack-name">SwiftData</div><div class="stack-desc">로컬 DB — Todo, Deadline, 메모, 링크 저장</div></div>
+    <div class="stack-row"><div class="stack-name">CloudKit</div><div class="stack-desc">iCloud 동기화 (SwiftData 내장 연동)</div></div>
+    <div class="stack-row"><div class="stack-name">EventKit</div><div class="stack-desc">애플 캘린더 (Deadline) + 미리 알림 (Todo)</div></div>
+    <div class="stack-row"><div class="stack-name">UserNotifications</div><div class="stack-desc">리마인더, 마감 알림, 미완료 이동 알림</div></div>
+    <div class="stack-row"><div class="stack-name">ShareSheet / SafariVC</div><div class="stack-desc">링크 공유 및 앱 내 URL 열기</div></div>
+    <div class="stack-row"><div class="stack-name">WidgetKit</div><div class="stack-desc">홈화면 위젯 (선택, 추후 추가 가능)</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="badge badge-gray">디자인</span>
+      <span class="section-title">UI 방향</span>
+    </div>
+    <div class="row"><div class="row-label">스타일</div><div class="row-value">다이어리 + 노션 감성 — 오프화이트, 깔끔한 타이포</div></div>
+    <div class="row"><div class="row-label">컬러 구분</div><div class="row-value">Todo → 퍼플 계열 / 마감일 → 앰버 계열</div></div>
+    <div class="row"><div class="row-label">기준 기기</div><div class="row-value">iPhone (우선), macOS (멀티플랫폼)</div></div>
+    <div class="row"><div class="row-label">iOS 최소</div><div class="row-value">iOS 17+ (SwiftData 요구사항)</div></div>
+  </div>
+</div>
