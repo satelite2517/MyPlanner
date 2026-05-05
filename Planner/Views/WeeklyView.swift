@@ -2,11 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct WeeklyView: View {
+    @Environment(ThemeManager.self) private var theme
     @Query private var allTodos: [TodoItem]
     @Query private var allDeadlines: [Deadline]
 
     @State private var currentWeekStart: Date = Self.weekStart(for: Date())
     @State private var selectedDay: Date? = nil
+    @State private var addTargetDay: Date? = nil
+    @State private var activeAddKind: AddItemSheet.ItemKind? = nil
+    @State private var isShowingAddTypeDialog = false
 
     // 한국 기준 일(Sun)~토(Sat) 주 시작
     private static func weekStart(for date: Date) -> Date {
@@ -24,13 +28,20 @@ struct WeeklyView: View {
 
     private var weekRangeText: String {
         guard let end = Calendar.current.date(byAdding: .day, value: 6, to: currentWeekStart) else { return "" }
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "ko_KR")
-        fmt.dateFormat = "M월 d일"
+        let startFmt = DateFormatter()
         let endFmt = DateFormatter()
-        endFmt.locale = Locale(identifier: "ko_KR")
-        endFmt.dateFormat = "d일"
-        return "\(fmt.string(from: currentWeekStart)) – \(endFmt.string(from: end))"
+        startFmt.locale = theme.locale
+        endFmt.locale = theme.locale
+
+        if theme.language.isKo {
+            startFmt.dateFormat = "M월 d일"
+            endFmt.dateFormat = "d일"
+        } else {
+            startFmt.dateFormat = "MMM d"
+            endFmt.dateFormat = Calendar.current.isDate(currentWeekStart, equalTo: end, toGranularity: .month) ? "d" : "MMM d"
+        }
+
+        return "\(startFmt.string(from: currentWeekStart)) – \(endFmt.string(from: end))"
     }
 
     private func todos(for day: Date) -> [TodoItem] {
@@ -51,38 +62,37 @@ struct WeeklyView: View {
                 weekNavigationBar
                 Divider()
 
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(weekDays, id: \.self) { day in
-                                DayBlockView(
-                                    day: day,
-                                    todos: todos(for: day),
-                                    deadlines: deadlines(for: day),
-                                    onTap: { selectedDay = day },
-                                    onAdd: { selectedDay = day }
-                                )
-                                .id(day)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                    }
-                    .onAppear {
-                        // 오늘 블럭으로 자동 스크롤
-                        if let today = weekDays.first(where: { Calendar.current.isDateInToday($0) }) {
-                            proxy.scrollTo(today, anchor: .top)
+                GeometryReader { geo in
+                    let vPad: CGFloat = 10
+                    let spacing: CGFloat = 6
+                    let blockHeight = (geo.size.height - vPad * 2 - spacing * 6) / 7
+
+                    VStack(spacing: spacing) {
+                        ForEach(weekDays, id: \.self) { day in
+                            DayBlockView(
+                                day: day,
+                                todos: todos(for: day),
+                                deadlines: deadlines(for: day),
+                                onTap: { selectedDay = day },
+                                onAdd: {
+                                    addTargetDay = day
+                                    isShowingAddTypeDialog = true
+                                }
+                            )
+                            .frame(height: max(blockHeight, 0), alignment: .top)
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, vPad)
                 }
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Weekly")
+            .background(theme.groupedBackground)
+            .navigationTitle(theme.str.weeklyTitle)
             .inlineNavigationTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .trailingBar) {
                     if !isCurrentWeek {
-                        Button("오늘") {
+                        Button(theme.str.today) {
                             withAnimation {
                                 currentWeekStart = Self.weekStart(for: Date())
                             }
@@ -91,10 +101,35 @@ struct WeeklyView: View {
                     }
                 }
             }
-            // 날짜 상세 뷰 (이후 단계에서 구현)
+            // 날짜 상세 뷰
             .sheet(item: $selectedDay) { day in
-                Text("날짜 상세 뷰: \(day.formatted(.dateTime.month().day()))")
+                DayDetailView(day: day)
                     .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(item: $activeAddKind, onDismiss: {
+                addTargetDay = nil
+            }) { kind in
+                if let addTargetDay {
+                    AddItemSheet(kind: kind, day: addTargetDay)
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                } else {
+                    EmptyView()
+                }
+            }
+            .confirmationDialog(theme.str.createItem, isPresented: $isShowingAddTypeDialog, titleVisibility: .visible) {
+                Button(theme.str.addTodo) {
+                    activeAddKind = .todo
+                }
+
+                Button(theme.str.addDeadline) {
+                    activeAddKind = .deadline
+                }
+
+                Button(theme.str.cancel, role: .cancel) {
+                    addTargetDay = nil
+                }
             }
         }
     }
@@ -111,8 +146,8 @@ struct WeeklyView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 34, height: 34)
-                    .background(Color(.systemGray6))
+                    .frame(width: 30, height: 30)
+                    .background(Color.appGray6)
                     .clipShape(Circle())
             }
 
@@ -121,6 +156,8 @@ struct WeeklyView: View {
             Text(weekRangeText)
                 .font(.subheadline)
                 .fontWeight(.semibold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
 
             Spacer()
 
@@ -134,18 +171,13 @@ struct WeeklyView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 34, height: 34)
-                    .background(Color(.systemGray6))
+                    .frame(width: 30, height: 30)
+                    .background(Color.appGray6)
                     .clipShape(Circle())
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(Color(.systemBackground))
+        .padding(.vertical, 8)
+        .background(theme.surfaceBackground)
     }
-}
-
-// sheet(item:)을 위해 Date를 Identifiable로 확장
-extension Date: @retroactive Identifiable {
-    public var id: TimeInterval { timeIntervalSince1970 }
 }

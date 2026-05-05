@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct TodoRowView: View {
-    let todo: TodoItem
+    @Environment(ThemeManager.self) private var theme
+    @Bindable var todo: TodoItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -12,7 +13,7 @@ struct TodoRowView: View {
             } label: {
                 Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(todo.isCompleted ? Color.todoPrimary : Color(.systemGray3))
+                    .foregroundStyle(todo.isCompleted ? theme.primary : Color.appGray3)
             }
             .buttonStyle(.plain)
 

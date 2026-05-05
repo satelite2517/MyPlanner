@@ -26,8 +26,51 @@ extension Color {
 
 // 앱 전체 색상 팔레트
 extension Color {
-    static let todoPrimary    = Color(hex: "534AB7")
-    static let todoBackground = Color(hex: "EEEDFE")
+    static let todoPrimary    = Color(hex: "2563EB")
+    static let todoBackground = Color(hex: "DBEAFE")
     static let deadlinePrimary    = Color(hex: "BA7517")
     static let deadlineBackground = Color(hex: "FAEEDA")
+}
+
+// 플랫폼별 시스템 색상 (UIKit/AppKit 직접 참조 대신 사용)
+extension Color {
+    static var appGroupedBackground: Color {
+        #if os(iOS)
+        Color(UIColor.systemGroupedBackground)
+        #else
+        Color(NSColor.windowBackgroundColor)
+        #endif
+    }
+
+    static var appBackground: Color {
+        #if os(iOS)
+        Color(UIColor.systemBackground)
+        #else
+        Color(NSColor.controlBackgroundColor)
+        #endif
+    }
+
+    static var appGray3: Color {
+        #if os(iOS)
+        Color(UIColor.systemGray3)
+        #else
+        Color(NSColor.systemGray).opacity(0.5)
+        #endif
+    }
+
+    static var appGray5: Color {
+        #if os(iOS)
+        Color(UIColor.systemGray5)
+        #else
+        Color(NSColor.systemGray).opacity(0.2)
+        #endif
+    }
+
+    static var appGray6: Color {
+        #if os(iOS)
+        Color(UIColor.systemGray6)
+        #else
+        Color(NSColor.systemGray).opacity(0.1)
+        #endif
+    }
 }

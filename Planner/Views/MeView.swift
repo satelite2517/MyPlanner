@@ -1,15 +1,400 @@
 import SwiftUI
 
 struct MeView: View {
+    @Environment(ThemeManager.self) private var theme
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("displayName") private var displayName = ""
+    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    @State private var isEditingName = false
+    @State private var isSyncingReminders = false
+    @State private var reminderStatusText: String? = nil
+    @State private var reminderAlertMessage = ""
+    @State private var isShowingReminderAlert = false
+
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "v\(version) (\(build))"
+    }
+
+    private var str: AppStrings { theme.str }
+
     var body: some View {
         NavigationStack {
-            Text("Me")
-                .navigationTitle("Me")
-                .largeNavigationTitle()
+            ScrollView {
+                VStack(spacing: 20) {
+                    // MARK: - 계정
+                    menuSection(header: str.account) {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle()
+                                    .fill(theme.primary.gradient)
+                                    .frame(width: 52, height: 52)
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.white)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                if displayName.isEmpty {
+                                    Text(str.setNameHint)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(displayName)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                                Text(str.plannerUser)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                        .onTapGesture { isEditingName = true }
+                    }
+
+                    // MARK: - 테마
+                    menuSection(header: str.themeLabel) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            themePaletteRow(title: str.accentColorLabel) {
+                                HStack(spacing: 14) {
+                                    ForEach(ThemeManager.accentThemes) { accent in
+                                        let isSelected = theme.selectedAccentID == accent.id
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                theme.selectedAccentID = accent.id
+                                            }
+                                        } label: {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(accent.primary)
+                                                    .frame(width: 28, height: 28)
+
+                                                if isSelected {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 12, weight: .bold))
+                                                        .foregroundStyle(.white)
+                                                }
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    Spacer()
+                                }
+                            }
+
+                            Divider()
+
+                            themePaletteRow(title: str.backgroundColorLabel) {
+                                HStack(spacing: 14) {
+                                    ForEach(ThemeManager.backgroundThemes) { background in
+                                        let isSelected = theme.selectedBackgroundID == background.id
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                theme.selectedBackgroundID = background.id
+                                            }
+                                        } label: {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(background.groupedBackground)
+                                                    .frame(width: 42, height: 42)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .stroke(isSelected ? theme.primary : background.border, lineWidth: isSelected ? 2 : 1)
+                                                    )
+
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(background.surfaceBackground)
+                                                    .frame(width: 28, height: 16)
+                                                    .offset(y: 8)
+
+                                                Circle()
+                                                    .fill(theme.primary)
+                                                    .frame(width: 16, height: 16)
+                                                    .offset(x: -8, y: -7)
+
+                                                if isSelected {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 12, weight: .bold))
+                                                        .foregroundStyle(theme.primary)
+                                                }
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+
+                    // MARK: - 환경설정
+                    menuSection(header: str.preferences) {
+                        HStack {
+                            Label(str.languageLabel, systemImage: "globe")
+                                .font(.subheadline)
+                            Spacer()
+                            languagePicker
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().padding(.leading, 16)
+
+                        HStack {
+                            Label(str.notifications, systemImage: "bell.fill")
+                                .font(.subheadline)
+                            Spacer()
+                            Toggle("", isOn: $notificationsEnabled)
+                                .labelsHidden()
+                                .tint(theme.primary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().padding(.leading, 16)
+
+                        Button { openNotificationSettings() } label: {
+                            HStack {
+                                Label(str.systemNotifications, systemImage: "gear")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // MARK: - 연동
+                    menuSection(header: str.integration) {
+                        Button {
+                            syncReminders()
+                        } label: {
+                            integrationSyncRow(
+                                icon: "checklist",
+                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                title: str.remindersApp,
+                                status: reminderStatusText ?? (isSyncingReminders ? str.syncing : str.syncNow),
+                                isLoading: isSyncingReminders
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
+                        integrationRow(
+                            icon: "calendar",
+                            colors: [Color(hex: "4A90D9"), Color(hex: "357ABD")],
+                            title: str.calendarApp
+                        )
+                    }
+
+                    // MARK: - 정보
+                    menuSection(header: str.aboutLabel) {
+                        HStack {
+                            Label(str.appVersion, systemImage: "info.circle")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(appVersion)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().padding(.leading, 16)
+
+                        Button {} label: {
+                            HStack {
+                                Label(str.sendFeedback, systemImage: "envelope")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+            }
+            .background(theme.groupedBackground)
+            .navigationTitle(str.meTitle)
+            .largeNavigationTitle()
+        }
+        .alert(str.setNameTitle, isPresented: $isEditingName) {
+            TextField(str.nameFieldLabel, text: $displayName)
+            Button(str.confirm) {}
+            Button(str.cancel, role: .cancel) {}
+        }
+        .alert(str.remindersApp, isPresented: $isShowingReminderAlert) {
+            Button(str.confirm) {}
+        } message: {
+            Text(reminderAlertMessage)
+        }
+    }
+
+    // MARK: - Helpers
+
+    @ViewBuilder
+    private func menuSection<Content: View>(header: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(header)
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(theme.surfaceBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    @ViewBuilder
+    private func themePaletteRow<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            content()
+        }
+    }
+
+    private var languagePicker: some View {
+        HStack(spacing: 8) {
+            ForEach(AppLanguage.allCases, id: \.self) { language in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        theme.language = language
+                    }
+                } label: {
+                    Text(language.displayName)
+                        .font(.caption)
+                        .fontWeight(theme.language == language ? .semibold : .regular)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(theme.language == language ? theme.primary : Color.appGray6)
+                        .foregroundStyle(theme.language == language ? Color.white : Color.primary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func integrationRow(icon: String, colors: [Color], title: String) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+            Text(str.comingSoon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
+    private func integrationSyncRow(icon: String, colors: [Color], title: String, status: String, isLoading: Bool) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private func openNotificationSettings() {
+        #if os(iOS)
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+        #endif
+    }
+
+    private func syncReminders() {
+        guard !isSyncingReminders else { return }
+
+        isSyncingReminders = true
+
+        Task {
+            do {
+                let result = try await ReminderSyncService().syncDeadlines(from: modelContext)
+                let parts = [
+                    str.remindersImportedCount(result.importedCount),
+                    result.removedCount > 0 ? str.remindersRemovedCount(result.removedCount) : nil,
+                ].compactMap { $0 }
+                let message = parts.joined(separator: ", ")
+
+                await MainActor.run {
+                    reminderStatusText = message.isEmpty ? str.remindersImported : message
+                    reminderAlertMessage = message.isEmpty ? str.remindersImported : message
+                    isShowingReminderAlert = true
+                    isSyncingReminders = false
+                }
+            } catch {
+                await MainActor.run {
+                    reminderStatusText = str.remindersPermissionDenied
+                    reminderAlertMessage = error.localizedDescription.isEmpty ? str.remindersPermissionDenied : error.localizedDescription
+                    isShowingReminderAlert = true
+                    isSyncingReminders = false
+                }
+            }
         }
     }
 }
 
 #Preview {
     MeView()
+        .environment(ThemeManager())
 }

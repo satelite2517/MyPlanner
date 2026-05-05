@@ -2,7 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct DeadlineRowView: View {
+    @Environment(ThemeManager.self) private var theme
     let deadline: Deadline
+
+    private func shortDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = theme.locale
+        formatter.dateFormat = theme.language.isKo ? "M/d" : "MMM d"
+        return formatter.string(from: date)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -35,14 +43,14 @@ struct DeadlineRowView: View {
 
                 // 기간 (startDate가 있는 경우)
                 if let start = deadline.startDate {
-                    Text("\(start.formatted(.dateTime.month().day())) – \(deadline.dueDate.formatted(.dateTime.month().day()))")
+                    Text("\(shortDate(start)) – \(shortDate(deadline.dueDate))")
                         .font(.caption2)
                         .foregroundStyle(Color.deadlinePrimary.opacity(0.8))
                 }
 
                 // 연결된 할일 수
                 if !deadline.todos.isEmpty {
-                    Text("할일 \(deadline.todos.count)개 연결됨")
+                    Text(theme.str.deadlineLinkedCount(deadline.todos.count))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

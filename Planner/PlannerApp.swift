@@ -19,9 +19,16 @@ struct PlannerApp: App {
         }
     }()
 
+    @State private var themeManager = ThemeManager()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(themeManager)
+                .environment(\.locale, themeManager.locale)
+                #if os(macOS)
+                .frame(minWidth: 390, minHeight: 700)
+                #endif
         }
         .modelContainer(sharedModelContainer)
     }
