@@ -19,7 +19,7 @@ struct DayDetailView: View {
     }
     
     private var dayTodos: [TodoItem] {
-        allTodos.filter { Calendar.current.isDate($0.dueDate, inSameDayAs: day) }
+        allTodos.filter { $0.includes(day) }
             .sorted { first, second in
                 // 중요 먼저, 시간 있으면 시간순, 없으면 제목순
                 if first.isImportant != second.isImportant {
@@ -67,20 +67,7 @@ struct DayDetailView: View {
             VStack(spacing: 0) {
                 tabPicker
                 Divider()
-
-                ScrollView {
-                    VStack(spacing: 16) {
-                        switch selectedTab {
-                        case .todos:
-                            todosContent
-                        case .deadlines:
-                            deadlinesContent
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-                .background(theme.groupedBackground)
+                detailContent
             }
             .navigationTitle(dateTitle)
             .inlineNavigationTitle()
@@ -117,6 +104,45 @@ struct DayDetailView: View {
                 .presentationDragIndicator(.visible)
         }
     }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        #if os(iOS)
+        TabView(selection: $selectedTab) {
+            detailScrollContent {
+                todosContent
+            }
+            .tag(DetailTab.todos)
+
+            detailScrollContent {
+                deadlinesContent
+            }
+            .tag(DetailTab.deadlines)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(theme.groupedBackground)
+        #else
+        detailScrollContent {
+            switch selectedTab {
+            case .todos:
+                todosContent
+            case .deadlines:
+                deadlinesContent
+            }
+        }
+        .background(theme.groupedBackground)
+        #endif
+    }
+
+    private func detailScrollContent<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                content()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+    }
     
     // MARK: - Tab Picker
 
@@ -144,6 +170,10 @@ struct DayDetailView: View {
                                 .frame(height: 2)
                         }
                     }
+                    .padding(.top, 8)
+                    #if os(macOS)
+                    .padding(.top, 4)
+                    #endif
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
@@ -157,11 +187,11 @@ struct DayDetailView: View {
     
     private var todosContent: some View {
         VStack(alignment: .leading, spacing: 10) {
+            todoStatsView
+
             if dayTodos.isEmpty {
                 emptyStateView
             } else {
-                todoStatsView
-
                 ForEach(dayTodos, id: \.id) { todo in
                     todoDetailRow(todo)
                 }
@@ -201,11 +231,11 @@ struct DayDetailView: View {
     
     private var deadlinesContent: some View {
         VStack(alignment: .leading, spacing: 10) {
+            deadlineStatsView
+
             if dayDeadlines.isEmpty {
                 emptyStateView
             } else {
-                deadlineStatsView
-
                 ForEach(dayDeadlines, id: \.id) { deadline in
                     deadlineDetailRow(deadline)
                 }

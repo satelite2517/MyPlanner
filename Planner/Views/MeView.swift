@@ -1,8 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct MeView: View {
     @Environment(ThemeManager.self) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
+    @Query(sort: \PlannerLabel.name) private var allLabels: [PlannerLabel]
     @AppStorage("displayName") private var displayName = ""
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @State private var isEditingName = false
@@ -10,6 +13,7 @@ struct MeView: View {
     @State private var reminderStatusText: String? = nil
     @State private var reminderAlertMessage = ""
     @State private var isShowingReminderAlert = false
+    @State private var isShowingLabelCreator = false
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -178,6 +182,38 @@ struct MeView: View {
                         .buttonStyle(.plain)
                     }
 
+                    menuSection(header: str.labelsLabel) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            if allLabels.isEmpty {
+                                Text(str.noLabels)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), alignment: .leading)], alignment: .leading, spacing: 10) {
+                                    ForEach(allLabels, id: \.id) { label in
+                                        SelectableLabelChip(label: label, isSelected: false) {}
+                                            .allowsHitTesting(false)
+                                    }
+                                }
+                            }
+
+                            Button {
+                                isShowingLabelCreator = true
+                            } label: {
+                                Label(str.addLabel, systemImage: "plus")
+                                    .font(.subheadline)
+                                    .foregroundStyle(theme.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(theme.accentBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+
                     // MARK: - 연동
                     menuSection(header: str.integration) {
                         Button {
@@ -217,7 +253,9 @@ struct MeView: View {
 
                         Divider().padding(.leading, 16)
 
-                        Button {} label: {
+                        Button {
+                            sendFeedbackEmail()
+                        } label: {
                             HStack {
                                 Label(str.sendFeedback, systemImage: "envelope")
                                     .font(.subheadline)
@@ -237,8 +275,6 @@ struct MeView: View {
                 .padding(.vertical, 16)
             }
             .background(theme.groupedBackground)
-            .navigationTitle(str.meTitle)
-            .largeNavigationTitle()
         }
         .alert(str.setNameTitle, isPresented: $isEditingName) {
             TextField(str.nameFieldLabel, text: $displayName)
@@ -249,6 +285,9 @@ struct MeView: View {
             Button(str.confirm) {}
         } message: {
             Text(reminderAlertMessage)
+        }
+        .sheet(isPresented: $isShowingLabelCreator) {
+            LabelEditorSheet()
         }
     }
 
@@ -392,9 +431,16 @@ struct MeView: View {
             }
         }
     }
+
+    private func sendFeedbackEmail() {
+        if let url = URL(string: "mailto:satelite251@gmail.com") {
+            openURL(url)
+        }
+    }
 }
 
 #Preview {
     MeView()
         .environment(ThemeManager())
+        .modelContainer(for: [TodoItem.self, Deadline.self, PlannerLabel.self, TodoHistory.self])
 }

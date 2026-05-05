@@ -45,7 +45,7 @@ struct WeeklyView: View {
     }
 
     private func todos(for day: Date) -> [TodoItem] {
-        allTodos.filter { Calendar.current.isDate($0.dueDate, inSameDayAs: day) }
+        allTodos.filter { $0.includes(day) }
     }
 
     private func deadlines(for day: Date) -> [Deadline] {
@@ -87,20 +87,6 @@ struct WeeklyView: View {
                 }
             }
             .background(theme.groupedBackground)
-            .navigationTitle(theme.str.weeklyTitle)
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .trailingBar) {
-                    if !isCurrentWeek {
-                        Button(theme.str.today) {
-                            withAnimation {
-                                currentWeekStart = Self.weekStart(for: Date())
-                            }
-                        }
-                        .font(.subheadline)
-                    }
-                }
-            }
             // 날짜 상세 뷰
             .sheet(item: $selectedDay) { day in
                 DayDetailView(day: day)
@@ -135,49 +121,61 @@ struct WeeklyView: View {
     }
 
     private var weekNavigationBar: some View {
-        HStack {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    currentWeekStart = Calendar.current.date(
-                        byAdding: .weekOfYear, value: -1, to: currentWeekStart
-                    ) ?? currentWeekStart
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.appGray6)
-                    .clipShape(Circle())
-            }
+        ZStack {
+            HStack {
+                weekArrowButton(systemName: "chevron.left", direction: -1)
 
-            Spacer()
+                Spacer()
+
+                HStack(spacing: 8) {
+                    weeklyTodayButton
+
+                    weekArrowButton(systemName: "chevron.right", direction: 1)
+                }
+            }
 
             Text(weekRangeText)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.9)
-
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    currentWeekStart = Calendar.current.date(
-                        byAdding: .weekOfYear, value: 1, to: currentWeekStart
-                    ) ?? currentWeekStart
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.appGray6)
-                    .clipShape(Circle())
-            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(theme.surfaceBackground)
+    }
+
+    private var weeklyTodayButton: some View {
+        Button(theme.str.today) {
+            withAnimation {
+                currentWeekStart = Self.weekStart(for: Date())
+            }
+        }
+        .font(.caption2)
+        .fontWeight(.medium)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.appGray6)
+        .foregroundStyle(.secondary)
+        .clipShape(Capsule())
+        .opacity(isCurrentWeek ? 0 : 1)
+        .allowsHitTesting(!isCurrentWeek)
+    }
+
+    private func weekArrowButton(systemName: String, direction: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                currentWeekStart = Calendar.current.date(
+                    byAdding: .weekOfYear, value: direction, to: currentWeekStart
+                ) ?? currentWeekStart
+            }
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 30, height: 30)
+                .background(Color.appGray6)
+                .clipShape(Circle())
+        }
     }
 }

@@ -3,7 +3,9 @@ import SwiftData
 
 struct DeadlineRowView: View {
     @Environment(ThemeManager.self) private var theme
+    @Environment(\.modelContext) private var modelContext
     let deadline: Deadline
+    @State private var isShowingEditSheet = false
 
     private func shortDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -72,7 +74,33 @@ struct DeadlineRowView: View {
             }
 
             Spacer()
+
+            Menu {
+                Button(theme.str.edit) {
+                    isShowingEditSheet = true
+                }
+
+                Button(theme.str.delete, role: .destructive) {
+                    deleteDeadline()
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 24, height: 24)
+            }
+            .menuStyle(.borderlessButton)
         }
         .padding(.vertical, 2)
+        .sheet(isPresented: $isShowingEditSheet) {
+            AddItemSheet(deadline: deadline)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func deleteDeadline() {
+        modelContext.delete(deadline)
+        try? modelContext.save()
     }
 }

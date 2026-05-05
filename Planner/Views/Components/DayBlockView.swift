@@ -56,23 +56,13 @@ struct DayBlockView: View {
     }
 
     var body: some View {
-        #if os(macOS)
         let content = AnyView(
             ViewThatFits(in: .vertical) {
-                macRegularLayout
-                macCompactLayout
+                splitRegularLayout
+                splitCompactLayout
                 summaryLayout
             }
         )
-        #else
-        let content = AnyView(
-            ViewThatFits(in: .vertical) {
-                regularLayout
-                compactLayout
-                summaryLayout
-            }
-        )
-        #endif
 
         return content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -93,111 +83,35 @@ struct DayBlockView: View {
             }
     }
 
-    #if os(macOS)
-    private var macRegularLayout: some View {
+    private var splitRegularLayout: some View {
         ViewThatFits(in: .vertical) {
             VStack(alignment: .leading, spacing: 12) {
                 header(compact: false)
 
                 HStack(alignment: .top, spacing: 12) {
-                    macPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems)
+                    splitPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems)
 
                     Divider()
 
-                    macPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems)
+                    splitPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
     }
 
-    private var macCompactLayout: some View {
+    private var splitCompactLayout: some View {
         VStack(alignment: .leading, spacing: 10) {
             header(compact: true)
 
             HStack(alignment: .top, spacing: 10) {
-                macPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems, compact: true)
+                splitPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems, compact: true)
 
                 Divider()
 
-                macPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems, compact: true)
+                splitPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems, compact: true)
             }
             .frame(maxHeight: .infinity, alignment: .top)
-        }
-    }
-    #endif
-
-    private var regularLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header(compact: false)
-
-            if isEmpty {
-                emptyState(text: theme.str.noItems, centered: true)
-                    .padding(.vertical, 6)
-            } else {
-                if !todos.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label(theme.str.todos, systemImage: "checkmark.circle")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(theme.primary)
-
-                        ForEach(todos, id: \.id) { todo in
-                            TodoRowView(todo: todo)
-                        }
-                    }
-                }
-
-                if !deadlines.isEmpty {
-                    if !todos.isEmpty {
-                        Divider()
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label(theme.str.deadlines, systemImage: "flag")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.deadlinePrimary)
-
-                        ForEach(deadlines, id: \.id) { deadline in
-                            DeadlineRowView(deadline: deadline)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var compactLayout: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            header(compact: true)
-
-            if isEmpty {
-                emptyState(text: theme.str.noItems, centered: false)
-            } else {
-                HStack(spacing: 6) {
-                    if !todos.isEmpty {
-                        countBadge(text: theme.str.todoCount(todos.count), tint: theme.primary, systemImage: "checkmark.circle.fill")
-                    }
-
-                    if !deadlines.isEmpty {
-                        countBadge(text: theme.str.deadlineCount(deadlines.count), tint: Color.deadlinePrimary, systemImage: "flag.fill")
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(previewItems.prefix(2).enumerated()), id: \.offset) { entry in
-                        previewRow(entry.element)
-                    }
-
-                    if previewItems.count > 2 {
-                        Text(theme.str.moreItems(previewItems.count - 2))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                    }
-                }
-            }
         }
     }
 
@@ -208,18 +122,22 @@ struct DayBlockView: View {
             if isEmpty {
                 emptyState(text: theme.str.noneShort, centered: false)
             } else {
-                HStack(spacing: 6) {
-                    if !todos.isEmpty {
-                        countBadge(text: "\(todos.count)", tint: theme.primary, systemImage: "checkmark.circle.fill")
-                    }
+                HStack(alignment: .top, spacing: 8) {
+                    splitPreviewColumn(
+                        title: theme.str.todos,
+                        tint: theme.primary,
+                        items: Array(todoPreviewItems.prefix(1)),
+                        compact: true
+                    )
 
-                    if !deadlines.isEmpty {
-                        countBadge(text: "\(deadlines.count)", tint: Color.deadlinePrimary, systemImage: "flag.fill")
-                    }
-                }
+                    Divider()
 
-                if let firstItem = previewItems.first {
-                    previewRow(firstItem)
+                    splitPreviewColumn(
+                        title: theme.str.deadlines,
+                        tint: Color.deadlinePrimary,
+                        items: Array(deadlinePreviewItems.prefix(1)),
+                        compact: true
+                    )
                 }
             }
         }
@@ -243,6 +161,24 @@ struct DayBlockView: View {
                     .fontWeight(isToday ? .semibold : .regular)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
+
+                if !todos.isEmpty {
+                    inlineCountBadge(
+                        text: compact ? "\(todos.count)" : theme.str.todoCount(todos.count),
+                        tint: theme.primary,
+                        systemImage: "checkmark.circle.fill",
+                        compact: compact
+                    )
+                }
+
+                if !deadlines.isEmpty {
+                    inlineCountBadge(
+                        text: compact ? "\(deadlines.count)" : theme.str.deadlineCount(deadlines.count),
+                        tint: Color.deadlinePrimary,
+                        systemImage: "flag.fill",
+                        compact: compact
+                    )
+                }
             }
 
             Spacer(minLength: 6)
@@ -275,12 +211,12 @@ struct DayBlockView: View {
         }
     }
 
-    private func countBadge(text: String, tint: Color, systemImage: String) -> some View {
+    private func inlineCountBadge(text: String, tint: Color, systemImage: String, compact: Bool) -> some View {
         Label(text, systemImage: systemImage)
-            .font(.caption2)
+            .font(compact ? .caption2 : .caption2)
             .foregroundStyle(tint)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, compact ? 6 : 7)
+            .padding(.vertical, compact ? 3 : 4)
             .background(tint.opacity(0.12))
             .clipShape(Capsule())
             .lineLimit(1)
@@ -294,8 +230,7 @@ struct DayBlockView: View {
             .lineLimit(1)
     }
 
-    #if os(macOS)
-    private func macPreviewColumn(title: String, tint: Color, items: [PreviewItem], compact: Bool = false) -> some View {
+    private func splitPreviewColumn(title: String, tint: Color, items: [PreviewItem], compact: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: compact ? 4 : 6) {
             Text(title)
                 .font(compact ? .caption2 : .caption)
@@ -338,7 +273,6 @@ struct DayBlockView: View {
             Spacer(minLength: 0)
         }
     }
-    #endif
 }
 
 private struct PreviewItem {

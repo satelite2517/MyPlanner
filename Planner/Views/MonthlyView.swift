@@ -8,6 +8,23 @@ struct MonthlyView: View {
 
     @State private var currentMonth: Date = Self.monthStart(for: Date())
     @State private var selectedDay: Date? = Self.defaultSelectedDay(for: Self.monthStart(for: Date()))
+    @State private var filter: FilterMode = .all
+
+    enum FilterMode: CaseIterable {
+        case all
+        case todos
+        case deadlines
+    }
+
+    private struct CombinedSelectedItem {
+        let date: Date
+        let content: Content
+
+        enum Content {
+            case todo(TodoItem)
+            case deadline(Deadline)
+        }
+    }
 
     private static func monthStart(for date: Date) -> Date {
         let comps = Calendar.current.dateComponents([.year, .month], from: date)
@@ -63,7 +80,7 @@ struct MonthlyView: View {
     }
 
     private func todos(for day: Date) -> [TodoItem] {
-        allTodos.filter { Calendar.current.isDate($0.dueDate, inSameDayAs: day) }
+        allTodos.filter { $0.includes(day) }
     }
 
     private func deadlines(for day: Date) -> [Deadline] {
@@ -118,6 +135,43 @@ struct MonthlyView: View {
         formatter.locale = theme.locale
         formatter.dateFormat = theme.language.isKo ? "M월 d일 (E)" : "MMM d (EEE)"
         return formatter.string(from: selectedDay)
+    }
+
+    private var selectedAllItems: [CombinedSelectedItem] {
+        let todoItems = selectedTodos.map { CombinedSelectedItem(date: $0.dueDate, content: .todo($0)) }
+        let deadlineItems = selectedDeadlines.map { CombinedSelectedItem(date: $0.dueDate, content: .deadline($0)) }
+
+        return (todoItems + deadlineItems).sorted { first, second in
+            if first.date != second.date {
+                return first.date < second.date
+            }
+
+            switch (first.content, second.content) {
+            case (.todo(let lhs), .todo(let rhs)):
+                if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                return lhs.title < rhs.title
+            case (.deadline(let lhs), .deadline(let rhs)):
+                if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                return lhs.title < rhs.title
+            case (.todo(let lhs), .deadline(let rhs)):
+                if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                return lhs.title < rhs.title
+            case (.deadline(let lhs), .todo(let rhs)):
+                if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                return lhs.title < rhs.title
+            }
+        }
+    }
+
+    private var selectedItemsEmptyForFilter: Bool {
+        switch filter {
+        case .all:
+            return selectedAllItems.isEmpty
+        case .todos:
+            return selectedTodos.isEmpty
+        case .deadlines:
+            return selectedDeadlines.isEmpty
+        }
     }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
@@ -175,74 +229,70 @@ struct MonthlyView: View {
                 .background(theme.groupedBackground)
             }
             .background(theme.groupedBackground)
-            .navigationTitle(theme.str.monthlyTitle)
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .trailingBar) {
-                    if !isCurrentMonth {
-                        Button(theme.str.today) {
-                            withAnimation {
-                                let newMonth = Self.monthStart(for: Date())
-                                currentMonth = newMonth
-                                selectedDay = Self.defaultSelectedDay(for: newMonth)
-                            }
-                        }
-                        .font(.subheadline)
-                    }
-                }
-            }
         }
     }
 
     private var monthNavigationBar: some View {
-        HStack {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    let newMonth = Calendar.current.date(
-                        byAdding: .month, value: -1, to: currentMonth
-                    ) ?? currentMonth
-                    currentMonth = newMonth
-                    selectedDay = Self.defaultSelectedDay(for: newMonth)
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.appGray6)
-                    .clipShape(Circle())
-            }
+        ZStack {
+            HStack {
+                monthArrowButton(systemName: "chevron.left", direction: -1)
 
-            Spacer()
+                Spacer()
+
+                HStack(spacing: 8) {
+                    monthlyTodayButton
+
+                    monthArrowButton(systemName: "chevron.right", direction: 1)
+                }
+            }
 
             Text(monthTitle)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.9)
-
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    let newMonth = Calendar.current.date(
-                        byAdding: .month, value: 1, to: currentMonth
-                    ) ?? currentMonth
-                    currentMonth = newMonth
-                    selectedDay = Self.defaultSelectedDay(for: newMonth)
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.appGray6)
-                    .clipShape(Circle())
-            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(theme.surfaceBackground)
+    }
+
+    private var monthlyTodayButton: some View {
+        Button(theme.str.today) {
+            withAnimation {
+                let newMonth = Self.monthStart(for: Date())
+                currentMonth = newMonth
+                selectedDay = Self.defaultSelectedDay(for: newMonth)
+            }
+        }
+        .font(.caption2)
+        .fontWeight(.medium)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.appGray6)
+        .foregroundStyle(.secondary)
+        .clipShape(Capsule())
+        .opacity(isCurrentMonth ? 0 : 1)
+        .allowsHitTesting(!isCurrentMonth)
+    }
+
+    private func monthArrowButton(systemName: String, direction: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                let newMonth = Calendar.current.date(
+                    byAdding: .month, value: direction, to: currentMonth
+                ) ?? currentMonth
+                currentMonth = newMonth
+                selectedDay = Self.defaultSelectedDay(for: newMonth)
+            }
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 30, height: 30)
+                .background(Color.appGray6)
+                .clipShape(Circle())
+        }
     }
 
     private var selectedDayPanel: some View {
@@ -251,15 +301,36 @@ struct MonthlyView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
 
+            filterPicker
+
             if let _ = selectedDay {
-                if selectedTodos.isEmpty && selectedDeadlines.isEmpty {
+                if selectedItemsEmptyForFilter {
                     Text(theme.str.noItemsLong)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 20)
                 } else {
-                    if !selectedTodos.isEmpty {
+                    if filter == .all {
+                        detailSection(title: theme.str.all, tint: theme.primary, systemImage: "line.3.horizontal.decrease.circle") {
+                            ForEach(Array(selectedAllItems.enumerated()), id: \.offset) { _, item in
+                                switch item.content {
+                                case .todo(let todo):
+                                    TodoRowView(todo: todo)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(theme.surfaceBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                case .deadline(let deadline):
+                                    DeadlineRowView(deadline: deadline)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(theme.surfaceBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                            }
+                        }
+                    } else if filter == .todos && !selectedTodos.isEmpty {
                         detailSection(title: theme.str.todos, tint: theme.primary, systemImage: "checkmark.circle") {
                             ForEach(selectedTodos, id: \.id) { todo in
                                 TodoRowView(todo: todo)
@@ -271,7 +342,7 @@ struct MonthlyView: View {
                         }
                     }
 
-                    if !selectedDeadlines.isEmpty {
+                    if filter == .deadlines && !selectedDeadlines.isEmpty {
                         detailSection(title: theme.str.deadlines, tint: Color.deadlinePrimary, systemImage: "flag") {
                             ForEach(selectedDeadlines, id: \.id) { deadline in
                                 DeadlineRowView(deadline: deadline)
@@ -296,6 +367,30 @@ struct MonthlyView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
+    private var filterPicker: some View {
+        HStack(spacing: 8) {
+            ForEach(FilterMode.allCases, id: \.self) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        filter = mode
+                    }
+                } label: {
+                    Text(title(for: mode))
+                        .font(.caption)
+                        .fontWeight(filter == mode ? .semibold : .regular)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(filter == mode ? theme.primary : Color.appGray6)
+                        .foregroundStyle(filter == mode ? Color.white : Color.primary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+        }
+    }
+
     @ViewBuilder
     private func detailSection<Content: View>(title: String, tint: Color, systemImage: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -307,6 +402,14 @@ struct MonthlyView: View {
             VStack(spacing: 8) {
                 content()
             }
+        }
+    }
+
+    private func title(for mode: FilterMode) -> String {
+        switch mode {
+        case .all: return theme.str.all
+        case .todos: return theme.str.todos
+        case .deadlines: return theme.str.deadlines
         }
     }
 }

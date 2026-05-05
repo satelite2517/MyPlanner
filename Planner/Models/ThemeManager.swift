@@ -48,6 +48,8 @@ struct AppStrings {
     var close:     String { ko ? "닫기"   : "Close" }
     var confirm:   String { ko ? "확인"   : "Confirm" }
     var cancel:    String { ko ? "취소"   : "Cancel" }
+    var delete:    String { ko ? "삭제"   : "Delete" }
+    var edit:      String { ko ? "수정"   : "Edit" }
     var comingSoon: String { ko ? "곧 출시" : "Coming Soon" }
     var allDay:    String { ko ? "종일"   : "All day" }
     var noneShort: String { ko ? "없음" : "None" }
@@ -95,7 +97,15 @@ struct AppStrings {
     var dateLabel: String { ko ? "날짜" : "Date" }
     var timeLabel: String { ko ? "시간 포함" : "Include time" }
     var startDateLabel: String { ko ? "시작일 사용" : "Use start date" }
+    var endDateToggleLabel: String { ko ? "종료일 사용" : "Use end date" }
+    var endDateLabel: String { ko ? "종료일" : "End date" }
     var autoCarryOverLabel: String { ko ? "미완료 시 다음날로 이동" : "Carry over if incomplete" }
+    var labelsLabel: String { ko ? "레이블" : "Labels" }
+    var addLabel: String { ko ? "레이블 추가" : "Add Label" }
+    var labelNameLabel: String { ko ? "레이블 이름" : "Label name" }
+    var labelColorLabel: String { ko ? "레이블 색상" : "Label color" }
+    var noLabels: String { ko ? "아직 만든 레이블이 없습니다" : "No labels yet" }
+    var labelExists: String { ko ? "같은 이름의 레이블이 이미 있습니다" : "A label with this name already exists" }
     var remindersApp: String { ko ? "미리 알림 앱" : "Reminders" }
     var calendarApp:  String { ko ? "캘린더 앱" : "Calendar" }
     var syncNow: String { ko ? "가져오기" : "Import" }
@@ -114,6 +124,8 @@ struct AppStrings {
     // Actions
     var addTodo: String { ko ? "할 일 추가" : "Add Todo" }
     var addDeadline: String { ko ? "마감일 추가" : "Add Deadline" }
+    var editTodo: String { ko ? "할 일 수정" : "Edit Todo" }
+    var editDeadline: String { ko ? "마감일 수정" : "Edit Deadline" }
     var createItem: String { ko ? "새 항목" : "New Item" }
 }
 

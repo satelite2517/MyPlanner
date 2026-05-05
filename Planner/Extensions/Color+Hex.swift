@@ -28,8 +28,8 @@ extension Color {
 extension Color {
     static let todoPrimary    = Color(hex: "2563EB")
     static let todoBackground = Color(hex: "DBEAFE")
-    static let deadlinePrimary    = Color(hex: "BA7517")
-    static let deadlineBackground = Color(hex: "FAEEDA")
+    static let deadlinePrimary    = Color(hex: "16A34A")
+    static let deadlineBackground = Color(hex: "E7F2EA")
 }
 
 // 플랫폼별 시스템 색상 (UIKit/AppKit 직접 참조 대신 사용)

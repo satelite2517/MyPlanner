@@ -24,6 +24,11 @@ struct ListView: View {
         }
     }
 
+    private struct DatedTodoItem {
+        let date: Date
+        let todo: TodoItem
+    }
+
     private var visibleRangeStart: Date {
         var calendar = Calendar.current
         calendar.firstWeekday = 2
@@ -40,21 +45,45 @@ struct ListView: View {
 
     private var groupedTodos: [(key: Date, items: [TodoItem])] {
         guard filter != .deadlines else { return [] }
-        return Dictionary(grouping: allTodos.filter { $0.dueDate >= visibleRangeStart }) {
-            Calendar.current.startOfDay(for: $0.dueDate)
+        let expandedItems = allTodos.flatMap { todo in
+            todo.visibleDays(startingAt: visibleRangeStart).map { DatedTodoItem(date: $0, todo: todo) }
+        }
+
+        return Dictionary(grouping: expandedItems) {
+            Calendar.current.startOfDay(for: $0.date)
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, items: $0.value) }
+        .map { key, items in
+            let sortedTodos = items.map(\.todo).sorted { first, second in
+                if first.isImportant != second.isImportant {
+                    return first.isImportant
+                }
+                if first.hasTime != second.hasTime {
+                    return first.hasTime
+                }
+                if first.hasTime && second.hasTime {
+                    return first.dueDate < second.dueDate
+                }
+                return first.title < second.title
+            }
+
+            return (key: key, items: sortedTodos)
+        }
     }
 
     private var groupedAllItems: [(key: Date, items: [CombinedListItem])] {
         guard filter == .all else { return [] }
 
-        let items =
+        let todoItems =
             allTodos
-                .filter { $0.dueDate >= visibleRangeStart }
-                .map { CombinedListItem(date: $0.dueDate, content: .todo($0)) }
-            +
+                .flatMap { todo in
+                    todo.visibleDays(startingAt: visibleRangeStart).map {
+                        CombinedListItem(date: $0, content: .todo(todo))
+                    }
+                }
+
+        let items =
+            todoItems +
             allDeadlines
                 .filter { $0.dueDate >= visibleRangeStart }
                 .map { CombinedListItem(date: $0.dueDate, content: .deadline($0)) }
@@ -72,15 +101,23 @@ struct ListView: View {
                 switch (first.content, second.content) {
                 case (.todo(let lhs), .todo(let rhs)):
                     if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                    if lhs.hasTime != rhs.hasTime { return lhs.hasTime }
+                    if lhs.hasTime && rhs.hasTime { return lhs.dueDate < rhs.dueDate }
                     return lhs.title < rhs.title
                 case (.deadline(let lhs), .deadline(let rhs)):
                     if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                    if lhs.hasTime != rhs.hasTime { return lhs.hasTime }
+                    if lhs.hasTime && rhs.hasTime { return lhs.dueDate < rhs.dueDate }
                     return lhs.title < rhs.title
                 case (.todo(let lhs), .deadline(let rhs)):
                     if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                    if lhs.hasTime != rhs.hasTime { return lhs.hasTime }
+                    if lhs.hasTime && rhs.hasTime { return lhs.dueDate < rhs.dueDate }
                     return lhs.title < rhs.title
                 case (.deadline(let lhs), .todo(let rhs)):
                     if lhs.isImportant != rhs.isImportant { return lhs.isImportant }
+                    if lhs.hasTime != rhs.hasTime { return lhs.hasTime }
+                    if lhs.hasTime && rhs.hasTime { return lhs.dueDate < rhs.dueDate }
                     return lhs.title < rhs.title
                 }
             }
@@ -169,8 +206,6 @@ struct ListView: View {
                 }
             }
             .background(theme.groupedBackground)
-            .navigationTitle(theme.str.listTitle)
-            .largeNavigationTitle()
         }
     }
 
