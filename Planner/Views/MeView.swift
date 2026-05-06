@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct MeView: View {
     @Environment(ThemeManager.self) private var theme
@@ -14,6 +15,12 @@ struct MeView: View {
     @State private var reminderAlertMessage = ""
     @State private var isShowingReminderAlert = false
     @State private var isShowingLabelCreator = false
+    @State private var isImportingSyncFile = false
+    @State private var isExportingSyncFile = false
+    @State private var syncFileStatusText: String? = nil
+    @State private var syncAlertMessage = ""
+    @State private var isShowingSyncAlert = false
+    @State private var syncExportDocument = PlannerSyncJSONDocument()
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -249,6 +256,66 @@ struct MeView: View {
 
                         Divider().padding(.leading, 16)
 
+                        Button {
+                            prepareSyncFileExport()
+                        } label: {
+                            integrationSyncRow(
+                                icon: "square.and.arrow.up",
+                                colors: [Color(hex: "5B8DEF"), Color(hex: "3A6BD9")],
+                                title: str.createSyncFile,
+                                status: syncFileStatusText ?? str.syncFileNotConnected,
+                                isLoading: false
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
+                        Button {
+                            isImportingSyncFile = true
+                        } label: {
+                            integrationSyncRow(
+                                icon: "folder",
+                                colors: [Color(hex: "6D8BFF"), Color(hex: "4F6AE6")],
+                                title: str.connectSyncFile,
+                                status: syncFileStatusText ?? str.syncFileNotConnected,
+                                isLoading: false
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
+                        Button {
+                            pullFromSyncFile()
+                        } label: {
+                            integrationSyncRow(
+                                icon: "arrow.down.doc",
+                                colors: [Color(hex: "2CB67D"), Color(hex: "1F9D68")],
+                                title: str.importSyncFile,
+                                status: syncFileStatusText ?? str.syncFileNotConnected,
+                                isLoading: false
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
+                        Button {
+                            pushToSyncFile()
+                        } label: {
+                            integrationSyncRow(
+                                icon: "arrow.up.doc",
+                                colors: [Color(hex: "F59E0B"), Color(hex: "D97706")],
+                                title: str.exportSyncFile,
+                                status: syncFileStatusText ?? str.syncFileNotConnected,
+                                isLoading: false
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
                         integrationRow(
                             icon: "calendar",
                             colors: [Color(hex: "4A90D9"), Color(hex: "357ABD")],
@@ -294,6 +361,9 @@ struct MeView: View {
             }
             .background(theme.groupedBackground)
         }
+        .task {
+            refreshSyncFileStatus()
+        }
         .alert(str.setNameTitle, isPresented: $isEditingName) {
             TextField(str.nameFieldLabel, text: $displayName)
             Button(str.confirm) {}
@@ -304,8 +374,28 @@ struct MeView: View {
         } message: {
             Text(reminderAlertMessage)
         }
+        .alert(str.iCloudDriveSync, isPresented: $isShowingSyncAlert) {
+            Button(str.confirm) {}
+        } message: {
+            Text(syncAlertMessage)
+        }
         .sheet(isPresented: $isShowingLabelCreator) {
             LabelEditorSheet()
+        }
+        .fileImporter(
+            isPresented: $isImportingSyncFile,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleSyncFileImport(result)
+        }
+        .fileExporter(
+            isPresented: $isExportingSyncFile,
+            document: syncExportDocument,
+            contentType: .json,
+            defaultFilename: "PlannerSync"
+        ) { result in
+            handleSyncFileExport(result)
         }
     }
 
@@ -486,6 +576,80 @@ struct MeView: View {
                     isSyncingReminders = false
                 }
             }
+        }
+    }
+
+    private func refreshSyncFileStatus() {
+        syncFileStatusText = PlannerSyncFileService.connectedFileName() ?? str.syncFileNotConnected
+    }
+
+    private func prepareSyncFileExport() {
+        do {
+            syncExportDocument = try PlannerSyncFileService.makeExportDocument(
+                modelContext: modelContext,
+                theme: theme
+            )
+            isExportingSyncFile = true
+        } catch {
+            syncAlertMessage = error.localizedDescription
+            isShowingSyncAlert = true
+        }
+    }
+
+    private func handleSyncFileExport(_ result: Result<URL, Error>) {
+        do {
+            let url = try result.get()
+            try PlannerSyncBookmarkStore.save(url: url)
+            refreshSyncFileStatus()
+            syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
+            isShowingSyncAlert = true
+        } catch {
+            syncAlertMessage = error.localizedDescription
+            isShowingSyncAlert = true
+        }
+    }
+
+    private func handleSyncFileImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            try PlannerSyncBookmarkStore.save(url: url)
+            try PlannerSyncFileService.import(from: url, modelContext: modelContext, theme: theme)
+            refreshSyncFileStatus()
+            syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
+            isShowingSyncAlert = true
+        } catch {
+            syncAlertMessage = error.localizedDescription
+            isShowingSyncAlert = true
+        }
+    }
+
+    private func pullFromSyncFile() {
+        do {
+            let fileName = try PlannerSyncFileService.importFromConnectedFile(
+                modelContext: modelContext,
+                theme: theme
+            )
+            refreshSyncFileStatus()
+            syncAlertMessage = "\(str.syncCompleted)\n\(fileName)"
+            isShowingSyncAlert = true
+        } catch {
+            syncAlertMessage = error.localizedDescription
+            isShowingSyncAlert = true
+        }
+    }
+
+    private func pushToSyncFile() {
+        do {
+            let fileName = try PlannerSyncFileService.exportToConnectedFile(
+                modelContext: modelContext,
+                theme: theme
+            )
+            refreshSyncFileStatus()
+            syncAlertMessage = "\(str.syncCompleted)\n\(fileName)"
+            isShowingSyncAlert = true
+        } catch {
+            syncAlertMessage = error.localizedDescription
+            isShowingSyncAlert = true
         }
     }
 

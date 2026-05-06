@@ -111,6 +111,14 @@ struct AppStrings {
     var labelExists: String { ko ? "같은 이름의 레이블이 이미 있습니다" : "A label with this name already exists" }
     var remindersApp: String { ko ? "미리 알림 앱" : "Reminders" }
     var calendarApp:  String { ko ? "캘린더 앱" : "Calendar" }
+    var iCloudDriveSync: String { ko ? "iCloud Drive 동기화" : "iCloud Drive Sync" }
+    var createSyncFile: String { ko ? "동기화 파일 만들기" : "Create Sync File" }
+    var connectSyncFile: String { ko ? "기존 동기화 파일 연결" : "Connect Sync File" }
+    var importSyncFile: String { ko ? "파일에서 가져오기" : "Import From File" }
+    var exportSyncFile: String { ko ? "파일로 저장하기" : "Export To File" }
+    var syncFileNotConnected: String { ko ? "연결된 파일 없음" : "No file connected" }
+    var syncFileConnected: String { ko ? "파일 연결됨" : "File connected" }
+    var syncCompleted: String { ko ? "동기화 완료" : "Sync complete" }
     var syncNow: String { ko ? "가져오기" : "Import" }
     var syncing: String { ko ? "동기화 중..." : "Syncing..." }
     var remindersImported: String { ko ? "미리알림 가져오기 완료" : "Reminders imported" }

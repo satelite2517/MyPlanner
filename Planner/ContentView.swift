@@ -4,6 +4,8 @@ import SwiftData
 struct ContentView: View {
     @Environment(ThemeManager.self) private var theme
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var didRunInitialFileImport = false
     @State private var didRunInitialReminderSync = false
 
     var body: some View {
@@ -29,7 +31,26 @@ struct ContentView: View {
                 }
         }
         .task {
+            await runInitialSyncFileImportIfNeeded()
             await runInitialReminderSyncIfNeeded()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .background else { return }
+            persistConnectedSyncFileIfNeeded()
+        }
+    }
+
+    @MainActor
+    private func runInitialSyncFileImportIfNeeded() async {
+        guard !didRunInitialFileImport else { return }
+        didRunInitialFileImport = true
+
+        do {
+            _ = try PlannerSyncFileService.importFromConnectedFile(modelContext: modelContext, theme: theme)
+        } catch PlannerSyncFileError.noConnectedFile {
+            // Ignore when the user hasn't connected a file yet.
+        } catch {
+            // Ignore startup sync failures; manual sync remains available in Me.
         }
     }
 
@@ -42,6 +63,17 @@ struct ContentView: View {
             _ = try await ReminderSyncService().syncDeadlines(from: modelContext)
         } catch {
             // Ignore startup sync failures; the manual sync entry point in Me remains available.
+        }
+    }
+
+    @MainActor
+    private func persistConnectedSyncFileIfNeeded() {
+        do {
+            _ = try PlannerSyncFileService.exportToConnectedFile(modelContext: modelContext, theme: theme)
+        } catch PlannerSyncFileError.noConnectedFile {
+            // Ignore when the user hasn't connected a file yet.
+        } catch {
+            // Ignore background export failures.
         }
     }
 }
