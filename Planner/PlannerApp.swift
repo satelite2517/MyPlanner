@@ -27,7 +27,9 @@ struct PlannerApp: App {
                 allowsSave: true,
                 cloudKitDatabase: .none
             )
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            try repairStoreIfNeeded(container)
+            return container
         } catch {
             do {
                 try removeStoreArtifacts(at: storeURL)
@@ -38,7 +40,9 @@ struct PlannerApp: App {
                     allowsSave: true,
                     cloudKitDatabase: .none
                 )
-                return try ModelContainer(for: schema, configurations: [resetConfiguration])
+                let container = try ModelContainer(for: schema, configurations: [resetConfiguration])
+                try repairStoreIfNeeded(container)
+                return container
             } catch {
                 fatalError("Could not create ModelContainer after reset: \(error)")
             }
@@ -73,5 +77,10 @@ struct PlannerApp: App {
         for candidate in candidates where fileManager.fileExists(atPath: candidate.path) {
             try fileManager.removeItem(at: candidate)
         }
+    }
+
+    private static func repairStoreIfNeeded(_ container: ModelContainer) throws {
+        let modelContext = ModelContext(container)
+        try PlannerDataRepairService.repair(modelContext: modelContext)
     }
 }

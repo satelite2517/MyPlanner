@@ -24,6 +24,8 @@ struct ReminderSyncService {
     private let store = EKEventStore()
 
     func syncDeadlines(from modelContext: ModelContext) async throws -> ReminderSyncResult {
+        try PlannerDataRepairService.repair(modelContext: modelContext)
+
         let granted = try await requestAccess()
         guard granted else {
             throw ReminderSyncError.accessDenied
@@ -32,9 +34,14 @@ struct ReminderSyncService {
         let reminders = try await fetchReminders()
         let fetchedDeadlines = try modelContext.fetch(FetchDescriptor<Deadline>())
         let existingImported = fetchedDeadlines.filter { $0.reminderID != nil }
-        let importedByID = Dictionary(uniqueKeysWithValues: existingImported.compactMap { deadline in
-            deadline.reminderID.map { ($0, deadline) }
-        })
+        let importedByID = existingImported.reduce(into: [String: Deadline]()) { result, deadline in
+            guard let reminderID = deadline.reminderID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !reminderID.isEmpty,
+                  result[reminderID] == nil else {
+                return
+            }
+            result[reminderID] = deadline
+        }
 
         var seenIDs = Set<String>()
         var importedCount = 0
@@ -157,7 +164,7 @@ struct ReminderSyncService {
 
         let reminder: EKReminder
         if let reminderID = deadline.reminderID,
-           let existing = store.calendarItem(withIdentifier: reminderID) as? EKReminder {
+           let existing = try await findReminder(matching: reminderID) {
             reminder = existing
         } else {
             reminder = EKReminder(eventStore: store)
@@ -178,13 +185,27 @@ struct ReminderSyncService {
         reminder.dueDateComponents = components
 
         try store.save(reminder, commit: true)
-        deadline.reminderID = reminder.calendarItemIdentifier
+        deadline.reminderID = syncIdentifier(for: reminder)
     }
 
     func deleteReminder(id: String) async throws {
         let granted = try await requestAccess()
         guard granted else { return }
-        guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return }
+        guard let reminder = try await findReminder(matching: id) else { return }
         try store.remove(reminder, commit: true)
+    }
+
+    private func findReminder(matching storedID: String) async throws -> EKReminder? {
+        let trimmedID = storedID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedID.isEmpty else { return nil }
+
+        if let reminder = store.calendarItem(withIdentifier: trimmedID) as? EKReminder {
+            return reminder
+        }
+
+        let reminders = try await fetchReminders()
+        return reminders.first { reminder in
+            reminder.calendarItemIdentifier == trimmedID || syncIdentifier(for: reminder) == trimmedID
+        }
     }
 }

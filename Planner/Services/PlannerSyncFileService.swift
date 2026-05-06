@@ -494,5 +494,6 @@ struct PlannerSyncFileService {
         UserDefaults.standard.set(snapshot.preferences.notificationsEnabled, forKey: "notificationsEnabled")
 
         try modelContext.save()
+        try PlannerDataRepairService.repair(modelContext: modelContext)
     }
 }
