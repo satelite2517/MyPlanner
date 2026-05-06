@@ -7,18 +7,12 @@ final class PlannerLabel {
     var name: String
     var emoji: String?
     var colorHex: String
-    @Relationship(inverse: \TodoItem.labels)
-    var todos: [TodoItem]?
-    @Relationship(inverse: \Deadline.labels)
-    var deadlines: [Deadline]?
 
     init(name: String, emoji: String? = nil, colorHex: String) {
         self.id = UUID()
         self.name = name
         self.emoji = emoji
         self.colorHex = colorHex
-        self.todos = []
-        self.deadlines = []
     }
 }
 

@@ -13,13 +13,12 @@ final class Deadline {
     var isImportant: Bool
     var calendarEventID: String? // 캘린더 앱 연동 식별자
     var reminderID: String?      // 미리 알림 앱 연동 식별자
-    @Relationship(inverse: \PlannerLabel.deadlines)
-    var labels: [PlannerLabel]?
+    var labels: [PlannerLabel]
     var links: [String]
 
     // 이 마감일에 연결된 할일 목록 (inverse relationship)
     @Relationship(deleteRule: .nullify, inverse: \TodoItem.deadline)
-    var todos: [TodoItem]?
+    var todos: [TodoItem]
 
     init(
         title: String,
@@ -47,10 +46,10 @@ final class Deadline {
     }
 
     var labelList: [PlannerLabel] {
-        labels ?? []
+        labels
     }
 
     var todoList: [TodoItem] {
-        todos ?? []
+        todos
     }
 }
