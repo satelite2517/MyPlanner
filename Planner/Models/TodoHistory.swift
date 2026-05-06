@@ -9,12 +9,14 @@ final class TodoHistory {
     var wasCompleted: Bool       // 그 날 완료했는지
     var carriedOverTo: Date?     // 이월됐다면 어느 날짜로 넘어갔는지
     var recordedAt: Date         // 기록 시점
+    var todo: TodoItem?
 
-    init(originalDate: Date, wasCompleted: Bool, carriedOverTo: Date? = nil) {
+    init(originalDate: Date, wasCompleted: Bool, carriedOverTo: Date? = nil, todo: TodoItem? = nil) {
         self.id = UUID()
         self.originalDate = originalDate
         self.wasCompleted = wasCompleted
         self.carriedOverTo = carriedOverTo
         self.recordedAt = Date()
+        self.todo = todo
     }
 }

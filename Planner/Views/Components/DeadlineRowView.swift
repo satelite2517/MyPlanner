@@ -18,7 +18,7 @@ struct DeadlineRowView: View {
         HStack(alignment: .top, spacing: 10) {
             // 왼쪽 amber 바
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.deadlinePrimary.opacity(0.8))
+                .fill(theme.deadlineColor.opacity(0.8))
                 .frame(width: 3)
                 .padding(.vertical, 2)
 
@@ -47,21 +47,21 @@ struct DeadlineRowView: View {
                 if let start = deadline.startDate {
                     Text("\(shortDate(start)) – \(shortDate(deadline.dueDate))")
                         .font(.caption2)
-                        .foregroundStyle(Color.deadlinePrimary.opacity(0.8))
+                        .foregroundStyle(theme.deadlineColor.opacity(0.8))
                 }
 
                 // 연결된 할일 수
-                if !deadline.todos.isEmpty {
-                    Text(theme.str.deadlineLinkedCount(deadline.todos.count))
+                if !deadline.todoList.isEmpty {
+                    Text(theme.str.deadlineLinkedCount(deadline.todoList.count))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 // 라벨
-                if !deadline.labels.isEmpty {
+                if !deadline.labelList.isEmpty {
                     HStack(spacing: 4) {
-                        ForEach(deadline.labels, id: \.id) { label in
-                            Text(label.name)
+                        ForEach(deadline.labelList, id: \.id) { label in
+                            Text(label.displayTitle)
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)

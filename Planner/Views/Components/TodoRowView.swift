@@ -42,7 +42,7 @@ struct TodoRowView: View {
             } label: {
                 Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(todo.isCompleted ? theme.primary : Color.appGray3)
+                    .foregroundStyle(todo.isCompleted ? theme.todoColor : Color.appGray3)
             }
             .buttonStyle(.plain)
 
@@ -67,10 +67,10 @@ struct TodoRowView: View {
                 }
 
                 // 라벨
-                if !todo.labels.isEmpty {
+                if !todo.labelList.isEmpty {
                     HStack(spacing: 4) {
-                        ForEach(todo.labels, id: \.id) { label in
-                            Text(label.name)
+                        ForEach(todo.labelList, id: \.id) { label in
+                            Text(label.displayTitle)
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
@@ -88,7 +88,7 @@ struct TodoRowView: View {
                 if todo.deadline != nil {
                     Image(systemName: "flag.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.deadlinePrimary.opacity(0.7))
+                        .foregroundStyle(theme.deadlineColor.opacity(0.7))
                 }
 
                 Menu {

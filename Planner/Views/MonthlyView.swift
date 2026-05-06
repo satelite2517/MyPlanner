@@ -331,7 +331,7 @@ struct MonthlyView: View {
                             }
                         }
                     } else if filter == .todos && !selectedTodos.isEmpty {
-                        detailSection(title: theme.str.todos, tint: theme.primary, systemImage: "checkmark.circle") {
+                        detailSection(title: theme.str.todos, tint: theme.todoColor, systemImage: "checkmark.circle") {
                             ForEach(selectedTodos, id: \.id) { todo in
                                 TodoRowView(todo: todo)
                                     .padding(.horizontal, 14)
@@ -343,7 +343,7 @@ struct MonthlyView: View {
                     }
 
                     if filter == .deadlines && !selectedDeadlines.isEmpty {
-                        detailSection(title: theme.str.deadlines, tint: Color.deadlinePrimary, systemImage: "flag") {
+                        detailSection(title: theme.str.deadlines, tint: theme.deadlineColor, systemImage: "flag") {
                             ForEach(selectedDeadlines, id: \.id) { deadline in
                                 DeadlineRowView(deadline: deadline)
                                     .padding(.horizontal, 14)
@@ -464,9 +464,9 @@ private struct MonthDayCell: View {
                     .lineLimit(1)
                     .padding(.horizontal, 3)
                     .padding(.vertical, 1)
-                    .foregroundStyle(item.isTodo ? theme.primary : Color.deadlinePrimary)
+                    .foregroundStyle(item.isTodo ? theme.todoColor : theme.deadlineColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(item.isTodo ? theme.accentBackground : Color.deadlineBackground)
+                    .background(item.isTodo ? theme.todoBackground : theme.deadlineBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 3))
             }
 

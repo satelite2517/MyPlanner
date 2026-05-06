@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 extension Color {
     init(hex: String) {
@@ -21,6 +26,35 @@ extension Color {
                   green: Double(g) / 255,
                   blue: Double(b) / 255,
                   opacity: Double(a) / 255)
+    }
+
+    var hexString: String? {
+        #if os(iOS)
+        let nativeColor = UIColor(self)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard nativeColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return nil
+        }
+        #elseif os(macOS)
+        guard let nativeColor = NSColor(self).usingColorSpace(.sRGB) else {
+            return nil
+        }
+
+        let red = nativeColor.redComponent
+        let green = nativeColor.greenComponent
+        let blue = nativeColor.blueComponent
+        #endif
+
+        return String(
+            format: "%02X%02X%02X",
+            Int(round(red * 255)),
+            Int(round(green * 255)),
+            Int(round(blue * 255))
+        )
     }
 }
 

@@ -71,7 +71,7 @@ struct AddItemSheet: View {
         _usesStartDate = State(initialValue: false)
         _startDate = State(initialValue: todo.dueDate)
         _endDate = State(initialValue: todo.endDate ?? todo.dueDate)
-        _selectedLabelIDs = State(initialValue: Set(todo.labels.map(\.id)))
+        _selectedLabelIDs = State(initialValue: Set(todo.labelList.map(\.id)))
     }
 
     init(deadline: Deadline) {
@@ -90,7 +90,7 @@ struct AddItemSheet: View {
         _usesStartDate = State(initialValue: deadline.startDate != nil)
         _startDate = State(initialValue: deadline.startDate ?? deadline.dueDate)
         _endDate = State(initialValue: deadline.dueDate)
-        _selectedLabelIDs = State(initialValue: Set(deadline.labels.map(\.id)))
+        _selectedLabelIDs = State(initialValue: Set(deadline.labelList.map(\.id)))
     }
 
     private var saveDisabled: Bool {

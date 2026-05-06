@@ -254,7 +254,7 @@ struct DayDetailView: View {
             
             statsItem(
                 icon: "flag.fill",
-                color: .orange,
+                color: theme.deadlineColor,
                 count: dayDeadlines.filter { !$0.isCompleted }.count,
                 label: theme.str.inProgress
             )
@@ -353,8 +353,8 @@ struct DayDetailView: View {
                     .padding(.leading, 8)
             }
 
-            if !deadline.todos.isEmpty {
-                connectedTodosView(deadline.todos)
+            if !deadline.todoList.isEmpty {
+                connectedTodosView(deadline.todoList)
                     .padding(.leading, 8)
             }
 

@@ -5,12 +5,27 @@ import SwiftData
 final class PlannerLabel {
     var id: UUID
     var name: String
+    var emoji: String?
     var colorHex: String
+    @Relationship(inverse: \TodoItem.labels)
+    var todos: [TodoItem]?
+    @Relationship(inverse: \Deadline.labels)
+    var deadlines: [Deadline]?
 
-    init(name: String, colorHex: String) {
+    init(name: String, emoji: String? = nil, colorHex: String) {
         self.id = UUID()
         self.name = name
+        self.emoji = emoji
         self.colorHex = colorHex
+        self.todos = []
+        self.deadlines = []
+    }
+}
+
+extension PlannerLabel {
+    var displayTitle: String {
+        guard let emoji, !emoji.isEmpty else { return name }
+        return "\(emoji) \(name)"
     }
 }
 

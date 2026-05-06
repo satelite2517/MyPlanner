@@ -39,7 +39,7 @@ struct DayBlockView: View {
             PreviewItem(
                 title: $0.title,
                 systemImage: $0.isCompleted ? "checkmark.circle.fill" : "checkmark.circle",
-                tint: $0.isCompleted ? Color.secondary : theme.primary
+                tint: $0.isCompleted ? Color.secondary : theme.todoColor
             )
         }
         return todoItems
@@ -50,7 +50,7 @@ struct DayBlockView: View {
             PreviewItem(
                 title: $0.title,
                 systemImage: "flag.fill",
-                tint: Color.deadlinePrimary
+                tint: theme.deadlineColor
             )
         }
     }
@@ -89,11 +89,11 @@ struct DayBlockView: View {
                 header(compact: false)
 
                 HStack(alignment: .top, spacing: 12) {
-                    splitPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems)
+                    splitPreviewColumn(title: theme.str.todos, tint: theme.todoColor, items: todoPreviewItems)
 
                     Divider()
 
-                    splitPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems)
+                    splitPreviewColumn(title: theme.str.deadlines, tint: theme.deadlineColor, items: deadlinePreviewItems)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
             }
@@ -105,11 +105,11 @@ struct DayBlockView: View {
             header(compact: true)
 
             HStack(alignment: .top, spacing: 10) {
-                splitPreviewColumn(title: theme.str.todos, tint: theme.primary, items: todoPreviewItems, compact: true)
+                splitPreviewColumn(title: theme.str.todos, tint: theme.todoColor, items: todoPreviewItems, compact: true)
 
                 Divider()
 
-                splitPreviewColumn(title: theme.str.deadlines, tint: Color.deadlinePrimary, items: deadlinePreviewItems, compact: true)
+                splitPreviewColumn(title: theme.str.deadlines, tint: theme.deadlineColor, items: deadlinePreviewItems, compact: true)
             }
             .frame(maxHeight: .infinity, alignment: .top)
         }
@@ -125,7 +125,7 @@ struct DayBlockView: View {
                 HStack(alignment: .top, spacing: 8) {
                     splitPreviewColumn(
                         title: theme.str.todos,
-                        tint: theme.primary,
+                        tint: theme.todoColor,
                         items: Array(todoPreviewItems.prefix(1)),
                         compact: true
                     )
@@ -134,7 +134,7 @@ struct DayBlockView: View {
 
                     splitPreviewColumn(
                         title: theme.str.deadlines,
-                        tint: Color.deadlinePrimary,
+                        tint: theme.deadlineColor,
                         items: Array(deadlinePreviewItems.prefix(1)),
                         compact: true
                     )
@@ -165,7 +165,7 @@ struct DayBlockView: View {
                 if !todos.isEmpty {
                     inlineCountBadge(
                         text: compact ? "\(todos.count)" : theme.str.todoCount(todos.count),
-                        tint: theme.primary,
+                        tint: theme.todoColor,
                         systemImage: "checkmark.circle.fill",
                         compact: compact
                     )
@@ -174,7 +174,7 @@ struct DayBlockView: View {
                 if !deadlines.isEmpty {
                     inlineCountBadge(
                         text: compact ? "\(deadlines.count)" : theme.str.deadlineCount(deadlines.count),
-                        tint: Color.deadlinePrimary,
+                        tint: theme.deadlineColor,
                         systemImage: "flag.fill",
                         compact: compact
                     )

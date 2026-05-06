@@ -13,15 +13,17 @@ final class TodoItem {
     var isImportant: Bool
     var autoCarryOver: Bool      // 미완료 시 다음날 자동 이동 여부
     var reminderID: String?      // 미리 알림 앱 연동 식별자
-    var labels: [PlannerLabel]
+    @Relationship(inverse: \PlannerLabel.todos)
+    var labels: [PlannerLabel]?
     var links: [String]
 
     // 연결된 마감일 (이 할일이 어떤 deadline의 세부 작업인지)
+    @Relationship(inverse: \Deadline.todos)
     var deadline: Deadline?
 
     // 이 할일의 완료/이월 이력
-    @Relationship(deleteRule: .cascade)
-    var history: [TodoHistory]
+    @Relationship(deleteRule: .cascade, inverse: \TodoHistory.todo)
+    var history: [TodoHistory]?
 
     init(
         title: String,
@@ -49,6 +51,14 @@ final class TodoItem {
         self.labels = labels
         self.links = links
         self.history = []
+    }
+
+    var labelList: [PlannerLabel] {
+        labels ?? []
+    }
+
+    var historyList: [TodoHistory] {
+        history ?? []
     }
 
     var effectiveEndDate: Date {

@@ -135,6 +135,24 @@ struct MeView: View {
                                     Spacer()
                                 }
                             }
+
+                            Divider()
+
+                            themeColorPickerRow(
+                                title: str.todoColorLabel,
+                                color: theme.todoColor
+                            ) { color in
+                                theme.updateTodoColor(color)
+                            }
+
+                            Divider()
+
+                            themeColorPickerRow(
+                                title: str.deadlineColorLabel,
+                                color: theme.deadlineColor
+                            ) { color in
+                                theme.updateDeadlineColor(color)
+                            }
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
@@ -321,6 +339,44 @@ struct MeView: View {
         }
     }
 
+    private func themeColorPickerRow(title: String, color: Color, onChange: @escaping (Color) -> Void) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let hex = color.hexString {
+                    Text("#\(hex)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Spacer()
+
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 22, height: 22)
+                    .overlay(
+                        Circle()
+                            .stroke(theme.backgroundBorder, lineWidth: 1)
+                    )
+
+                ColorPicker(
+                    title,
+                    selection: Binding(
+                        get: { color },
+                        set: { onChange($0) }
+                    ),
+                    supportsOpacity: false
+                )
+                .labelsHidden()
+            }
+        }
+    }
+
     private var languagePicker: some View {
         HStack(spacing: 8) {
             ForEach(AppLanguage.allCases, id: \.self) { language in
@@ -412,6 +468,7 @@ struct MeView: View {
                 let parts = [
                     str.remindersImportedCount(result.importedCount),
                     result.removedCount > 0 ? str.remindersRemovedCount(result.removedCount) : nil,
+                    result.skippedCount > 0 ? str.remindersSkippedCount(result.skippedCount) : nil,
                 ].compactMap { $0 }
                 let message = parts.joined(separator: ", ")
 

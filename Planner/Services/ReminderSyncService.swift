@@ -5,6 +5,7 @@ import SwiftData
 struct ReminderSyncResult {
     let importedCount: Int
     let removedCount: Int
+    let skippedCount: Int
 }
 
 enum ReminderSyncError: LocalizedError {
@@ -36,13 +37,20 @@ struct ReminderSyncService {
         })
 
         var seenIDs = Set<String>()
+        var importedCount = 0
+        var skippedCount = 0
 
         for reminder in reminders {
-            let reminderID = reminder.calendarItemIdentifier
-            seenIDs.insert(reminderID)
-            let due = resolvedDueDate(for: reminder)
+            let reminderID = syncIdentifier(for: reminder)
+            let legacyReminderID = reminder.calendarItemIdentifier
+            guard let due = resolvedDueDate(for: reminder) else {
+                skippedCount += 1
+                continue
+            }
 
-            let deadline = importedByID[reminderID] ?? Deadline(
+            seenIDs.insert(reminderID)
+
+            let deadline = importedByID[reminderID] ?? importedByID[legacyReminderID] ?? Deadline(
                 title: reminder.title.isEmpty ? "Reminder" : reminder.title,
                 dueDate: due.date,
                 hasTime: due.hasTime
@@ -50,9 +58,11 @@ struct ReminderSyncService {
 
             apply(reminder: reminder, to: deadline)
 
-            if importedByID[reminderID] == nil {
+            if importedByID[reminderID] == nil && importedByID[legacyReminderID] == nil {
                 modelContext.insert(deadline)
             }
+
+            importedCount += 1
         }
 
         var removedCount = 0
@@ -62,7 +72,11 @@ struct ReminderSyncService {
         }
 
         try modelContext.save()
-        return ReminderSyncResult(importedCount: reminders.count, removedCount: removedCount)
+        return ReminderSyncResult(
+            importedCount: importedCount,
+            removedCount: removedCount,
+            skippedCount: skippedCount
+        )
     }
 
     private func requestAccess() async throws -> Bool {
@@ -86,8 +100,17 @@ struct ReminderSyncService {
         }
     }
 
+    private func syncIdentifier(for reminder: EKReminder) -> String {
+        let externalID = reminder.calendarItemExternalIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let externalID, !externalID.isEmpty {
+            return externalID
+        }
+
+        return reminder.calendarItemIdentifier
+    }
+
     private func apply(reminder: EKReminder, to deadline: Deadline) {
-        let due = resolvedDueDate(for: reminder)
+        guard let due = resolvedDueDate(for: reminder) else { return }
         let start = resolvedStartDate(for: reminder)
 
         deadline.title = reminder.title.isEmpty ? "Reminder" : reminder.title
@@ -97,11 +120,11 @@ struct ReminderSyncService {
         deadline.startDate = start
         deadline.isCompleted = reminder.isCompleted
         deadline.isImportant = reminder.priority > 0 && reminder.priority <= 4
-        deadline.reminderID = reminder.calendarItemIdentifier
+        deadline.reminderID = syncIdentifier(for: reminder)
         deadline.links = reminder.url.map { [$0.absoluteString] } ?? []
     }
 
-    private func resolvedDueDate(for reminder: EKReminder) -> (date: Date, hasTime: Bool) {
+    private func resolvedDueDate(for reminder: EKReminder) -> (date: Date, hasTime: Bool)? {
         if let components = reminder.dueDateComponents,
            let date = Calendar.current.date(from: components) {
             return (date, hasExplicitTime(in: components))
@@ -112,7 +135,11 @@ struct ReminderSyncService {
             return (date, hasExplicitTime(in: components))
         }
 
-        return (Calendar.current.startOfDay(for: Date()), false)
+        if reminder.isCompleted, let completionDate = reminder.completionDate {
+            return (Calendar.current.startOfDay(for: completionDate), false)
+        }
+
+        return nil
     }
 
     private func resolvedStartDate(for reminder: EKReminder) -> Date? {

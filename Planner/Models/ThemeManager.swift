@@ -84,6 +84,8 @@ struct AppStrings {
     var languageLabel: String { ko ? "언어"   : "Language" }
     var accentColorLabel: String { ko ? "메인색" : "Accent" }
     var backgroundColorLabel: String { ko ? "배경색" : "Background" }
+    var todoColorLabel: String { ko ? "할 일 색" : "Todo Color" }
+    var deadlineColorLabel: String { ko ? "마감일 색" : "Deadline Color" }
     var notifications: String { ko ? "알림"   : "Notifications" }
     var systemNotifications: String { ko ? "시스템 알림 설정" : "System Notification Settings" }
     var appVersion:   String { ko ? "앱 버전" : "App Version" }
@@ -103,6 +105,7 @@ struct AppStrings {
     var labelsLabel: String { ko ? "레이블" : "Labels" }
     var addLabel: String { ko ? "레이블 추가" : "Add Label" }
     var labelNameLabel: String { ko ? "레이블 이름" : "Label name" }
+    var labelEmojiLabel: String { ko ? "레이블 이모지" : "Label Emoji" }
     var labelColorLabel: String { ko ? "레이블 색상" : "Label color" }
     var noLabels: String { ko ? "아직 만든 레이블이 없습니다" : "No labels yet" }
     var labelExists: String { ko ? "같은 이름의 레이블이 이미 있습니다" : "A label with this name already exists" }
@@ -114,6 +117,7 @@ struct AppStrings {
     var remindersPermissionDenied: String { ko ? "미리알림 접근 권한이 필요합니다" : "Reminders access is required" }
     func remindersImportedCount(_ count: Int) -> String { ko ? "\(count)개 동기화" : "Synced \(count)" }
     func remindersRemovedCount(_ count: Int) -> String { ko ? "\(count)개 제거됨" : "Removed \(count)" }
+    func remindersSkippedCount(_ count: Int) -> String { ko ? "\(count)개 건너뜀" : "Skipped \(count)" }
 
     // Navigation
     var weeklyTitle: String { ko ? "주간" : "Weekly" }
@@ -159,6 +163,14 @@ final class ThemeManager {
         didSet { UserDefaults.standard.set(selectedBackgroundID, forKey: "appBackgroundThemeID") }
     }
 
+    var selectedTodoColorHex: String {
+        didSet { UserDefaults.standard.set(selectedTodoColorHex, forKey: "appTodoColorHex") }
+    }
+
+    var selectedDeadlineColorHex: String {
+        didSet { UserDefaults.standard.set(selectedDeadlineColorHex, forKey: "appDeadlineColorHex") }
+    }
+
     var languageRaw: String {
         didSet { UserDefaults.standard.set(languageRaw, forKey: "appLanguage") }
     }
@@ -169,6 +181,9 @@ final class ThemeManager {
             ?? legacyThemeID
             ?? "blue"
         selectedBackgroundID = UserDefaults.standard.string(forKey: "appBackgroundThemeID") ?? "white"
+        selectedTodoColorHex = UserDefaults.standard.string(forKey: "appTodoColorHex")
+            ?? (ThemeManager.accentThemes.first { $0.id == selectedAccentID }?.primaryHex ?? "2563EB")
+        selectedDeadlineColorHex = UserDefaults.standard.string(forKey: "appDeadlineColorHex") ?? "16A34A"
         languageRaw = UserDefaults.standard.string(forKey: "appLanguage") ?? "ko"
     }
 
@@ -189,7 +204,23 @@ final class ThemeManager {
     var str: AppStrings { AppStrings(lang: language) }
     var primary: Color { currentAccent.primary }
     var accentBackground: Color { currentAccent.accentBackground }
+    var todoColor: Color { Color(hex: selectedTodoColorHex) }
+    var todoBackground: Color { todoColor.opacity(0.14) }
+    var deadlineColor: Color { Color(hex: selectedDeadlineColorHex) }
+    var deadlineBackground: Color { deadlineColor.opacity(0.14) }
     var groupedBackground: Color { currentBackground.groupedBackground }
     var surfaceBackground: Color { currentBackground.surfaceBackground }
     var backgroundBorder: Color { currentBackground.border }
+
+    func updateTodoColor(_ color: Color) {
+        if let hex = color.hexString {
+            selectedTodoColorHex = hex
+        }
+    }
+
+    func updateDeadlineColor(_ color: Color) {
+        if let hex = color.hexString {
+            selectedDeadlineColorHex = hex
+        }
+    }
 }
