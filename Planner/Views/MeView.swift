@@ -569,10 +569,16 @@ struct MeView: View {
     private func handleSyncFileImport(_ result: Result<[URL], Error>) {
         do {
             guard let url = try result.get().first else { return }
+            // 북마크 생성 전에 보안 스코프를 먼저 활성화해야 이후 세션에서도 접근 유지됨
+            let scopeStarted = url.startAccessingSecurityScopedResource()
+            defer { if scopeStarted { url.stopAccessingSecurityScopedResource() } }
             try PlannerSyncBookmarkStore.save(url: url)
             try PlannerSyncFileService.import(from: url, modelContext: modelContext, theme: theme)
             refreshSyncFileStatus()
             syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
+            isShowingSyncAlert = true
+        } catch PlannerSyncFileError.fileNotAccessible {
+            syncAlertMessage = str.syncFileNotAccessible
             isShowingSyncAlert = true
         } catch {
             syncAlertMessage = error.localizedDescription
@@ -589,6 +595,9 @@ struct MeView: View {
             refreshSyncFileStatus()
             syncAlertMessage = "\(str.syncCompleted)\n\(fileName)"
             isShowingSyncAlert = true
+        } catch PlannerSyncFileError.fileNotAccessible {
+            syncAlertMessage = str.syncFileNotAccessible
+            isShowingSyncAlert = true
         } catch {
             syncAlertMessage = error.localizedDescription
             isShowingSyncAlert = true
@@ -603,6 +612,9 @@ struct MeView: View {
             )
             refreshSyncFileStatus()
             syncAlertMessage = "\(str.syncCompleted)\n\(fileName)"
+            isShowingSyncAlert = true
+        } catch PlannerSyncFileError.fileNotAccessible {
+            syncAlertMessage = str.syncFileNotAccessible
             isShowingSyncAlert = true
         } catch {
             syncAlertMessage = error.localizedDescription

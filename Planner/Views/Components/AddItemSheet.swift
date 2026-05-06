@@ -238,6 +238,7 @@ struct AddItemSheet: View {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedDueDate = normalized(date: dueDate, hasTime: hasTime)
         let selectedLabels = allLabels.filter { selectedLabelIDs.contains($0.id) }
+        var deadlineToSync: Deadline?
 
         if let editingTodo {
             let normalizedEndDate = usesEndDate ? normalized(date: endDate, hasTime: hasTime) : nil
@@ -257,6 +258,7 @@ struct AddItemSheet: View {
             editingDeadline.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             editingDeadline.isImportant = isImportant
             editingDeadline.labels = selectedLabels
+            deadlineToSync = editingDeadline
         } else {
             switch kind {
             case .todo:
@@ -284,10 +286,17 @@ struct AddItemSheet: View {
                     labels: selectedLabels
                 )
                 modelContext.insert(deadline)
+                deadlineToSync = deadline
             }
         }
 
         try? modelContext.save()
+        if let deadline = deadlineToSync {
+            Task {
+                try? await ReminderSyncService().pushDeadline(deadline)
+                try? modelContext.save()
+            }
+        }
         dismiss()
     }
 

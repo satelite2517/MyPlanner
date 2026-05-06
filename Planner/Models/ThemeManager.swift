@@ -74,6 +74,8 @@ struct AppStrings {
     var important:  String { ko ? "중요"   : "Important" }
     var inProgress: String { ko ? "진행중" : "In Progress" }
     var linkedTodos: String { ko ? "연결된 할 일" : "Linked Todos" }
+    var linkedDeadline: String { ko ? "연결된 마감일" : "Linked Deadline" }
+    var linksLabel: String { ko ? "링크" : "Links" }
 
     // Me
     var account:      String { ko ? "계정"    : "Account" }
@@ -118,6 +120,7 @@ struct AppStrings {
     var exportSyncFile: String { ko ? "파일로 저장하기" : "Export To File" }
     var syncFileNotConnected: String { ko ? "연결된 파일 없음" : "No file connected" }
     var syncFileConnected: String { ko ? "파일 연결됨" : "File connected" }
+    var syncFileNotAccessible: String { ko ? "파일을 열 수 없습니다. iCloud Drive 파일이라면 이 기기에 다운로드된 상태인지 확인 후 다시 시도하세요." : "The sync file couldn't be opened. If it's on iCloud Drive, make sure it's downloaded to this device, then try again." }
     var syncCompleted: String { ko ? "동기화 완료" : "Sync complete" }
     var syncNow: String { ko ? "가져오기" : "Import" }
     var syncing: String { ko ? "동기화 중..." : "Syncing..." }

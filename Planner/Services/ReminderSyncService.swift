@@ -150,4 +150,41 @@ struct ReminderSyncService {
     private func hasExplicitTime(in components: DateComponents) -> Bool {
         components.hour != nil || components.minute != nil || components.second != nil
     }
+
+    func pushDeadline(_ deadline: Deadline) async throws {
+        let granted = try await requestAccess()
+        guard granted else { throw ReminderSyncError.accessDenied }
+
+        let reminder: EKReminder
+        if let reminderID = deadline.reminderID,
+           let existing = store.calendarItem(withIdentifier: reminderID) as? EKReminder {
+            reminder = existing
+        } else {
+            reminder = EKReminder(eventStore: store)
+            reminder.calendar = store.defaultCalendarForNewReminders()
+        }
+
+        reminder.title       = deadline.title.isEmpty ? "Deadline" : deadline.title
+        reminder.notes       = deadline.notes.isEmpty ? nil : deadline.notes
+        reminder.isCompleted = deadline.isCompleted
+        reminder.priority    = deadline.isImportant ? 1 : 0
+
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: deadline.dueDate)
+        if deadline.hasTime {
+            let time = Calendar.current.dateComponents([.hour, .minute], from: deadline.dueDate)
+            components.hour   = time.hour
+            components.minute = time.minute
+        }
+        reminder.dueDateComponents = components
+
+        try store.save(reminder, commit: true)
+        deadline.reminderID = reminder.calendarItemIdentifier
+    }
+
+    func deleteReminder(id: String) async throws {
+        let granted = try await requestAccess()
+        guard granted else { return }
+        guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return }
+        try store.remove(reminder, commit: true)
+    }
 }

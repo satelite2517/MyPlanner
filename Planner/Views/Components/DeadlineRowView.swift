@@ -5,7 +5,12 @@ struct DeadlineRowView: View {
     @Environment(ThemeManager.self) private var theme
     @Environment(\.modelContext) private var modelContext
     let deadline: Deadline
-    @State private var isShowingEditSheet = false
+
+    private enum ActiveSheet: Identifiable {
+        case edit, detail
+        var id: Self { self }
+    }
+    @State private var activeSheet: ActiveSheet?
 
     private func shortDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -72,12 +77,14 @@ struct DeadlineRowView: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activeSheet = .detail }
 
             Spacer()
 
             Menu {
                 Button(theme.str.edit) {
-                    isShowingEditSheet = true
+                    activeSheet = .edit
                 }
 
                 Button(theme.str.delete, role: .destructive) {
@@ -92,15 +99,26 @@ struct DeadlineRowView: View {
             .menuStyle(.borderlessButton)
         }
         .padding(.vertical, 2)
-        .sheet(isPresented: $isShowingEditSheet) {
-            AddItemSheet(deadline: deadline)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .edit:
+                AddItemSheet(deadline: deadline)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            case .detail:
+                ItemDetailView(item: .deadline(deadline))
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
     private func deleteDeadline() {
+        let reminderID = deadline.reminderID
         modelContext.delete(deadline)
         try? modelContext.save()
+        if let reminderID {
+            Task { try? await ReminderSyncService().deleteReminder(id: reminderID) }
+        }
     }
 }

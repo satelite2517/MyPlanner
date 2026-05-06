@@ -7,6 +7,10 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var didRunInitialFileImport = false
     @State private var didRunInitialReminderSync = false
+    @Query private var allTodosForExport: [TodoItem]
+    @Query private var allDeadlinesForExport: [Deadline]
+    @Query private var allLabelsForExport: [PlannerLabel]
+    @State private var pendingExportTask: Task<Void, Never>?
 
     var body: some View {
         TabView {
@@ -40,6 +44,9 @@ struct ContentView: View {
                 await handleScenePhaseChange(newPhase)
             }
         }
+        .onChange(of: allTodosForExport) { _, _ in scheduleAutoExport() }
+        .onChange(of: allDeadlinesForExport) { _, _ in scheduleAutoExport() }
+        .onChange(of: allLabelsForExport) { _, _ in scheduleAutoExport() }
     }
 
     @MainActor
@@ -121,6 +128,17 @@ struct ContentView: View {
             // Ignore when the user hasn't connected a file yet.
         } catch {
             // Ignore background export failures.
+        }
+    }
+
+    @MainActor
+    private func scheduleAutoExport() {
+        guard didRunInitialFileImport else { return }
+        pendingExportTask?.cancel()
+        pendingExportTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            persistConnectedSyncFileIfNeeded()
         }
     }
 }

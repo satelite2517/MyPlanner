@@ -5,7 +5,12 @@ struct TodoRowView: View {
     @Environment(ThemeManager.self) private var theme
     @Environment(\.modelContext) private var modelContext
     @Bindable var todo: TodoItem
-    @State private var isShowingEditSheet = false
+
+    private enum ActiveSheet: Identifiable {
+        case edit, detail
+        var id: Self { self }
+    }
+    @State private var activeSheet: ActiveSheet?
 
     private var scheduleText: String? {
         let formatter = DateFormatter()
@@ -81,6 +86,8 @@ struct TodoRowView: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture { activeSheet = .detail }
 
             Spacer()
 
@@ -93,7 +100,7 @@ struct TodoRowView: View {
 
                 Menu {
                     Button(theme.str.edit) {
-                        isShowingEditSheet = true
+                        activeSheet = .edit
                     }
 
                     Button(theme.str.delete, role: .destructive) {
@@ -109,10 +116,17 @@ struct TodoRowView: View {
             }
         }
         .padding(.vertical, 2)
-        .sheet(isPresented: $isShowingEditSheet) {
-            AddItemSheet(todo: todo)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .edit:
+                AddItemSheet(todo: todo)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            case .detail:
+                ItemDetailView(item: .todo(todo))
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 enum PlannerSyncFileError: LocalizedError {
     case noConnectedFile
     case invalidFile
+    case fileNotAccessible
 
     var errorDescription: String? {
         switch self {
@@ -15,6 +16,8 @@ enum PlannerSyncFileError: LocalizedError {
             return "No sync file is connected."
         case .invalidFile:
             return "The selected sync file is invalid."
+        case .fileNotAccessible:
+            return "The sync file couldn't be opened. If it's on iCloud Drive, make sure it's downloaded to this device, then try again."
         }
     }
 }
@@ -222,11 +225,20 @@ struct PlannerSyncFileService {
 
     static func importFromConnectedFile(modelContext: ModelContext, theme: ThemeManager) throws -> String {
         let url = try activeSyncFileURL()
+        let usingConnectedBookmark = (try? PlannerSyncBookmarkStore.resolvedURL()) != nil
+
         guard FileManager.default.fileExists(atPath: url.path) else {
+            if usingConnectedBookmark { PlannerSyncBookmarkStore.clear() }
             throw PlannerSyncFileError.noConnectedFile
         }
 
-        try `import`(from: url, modelContext: modelContext, theme: theme)
+        do {
+            try `import`(from: url, modelContext: modelContext, theme: theme)
+        } catch {
+            // 연결된 외부 파일 접근 실패 → 스테일 북마크 제거하고 로컬 파일로 폴백
+            if usingConnectedBookmark { PlannerSyncBookmarkStore.clear() }
+            throw error
+        }
         return url.lastPathComponent
     }
 
@@ -251,7 +263,18 @@ struct PlannerSyncFileService {
             }
         }
 
-        let data = try Data(contentsOf: url)
+        // iCloud Drive 파일이면 로컬 다운로드 트리거 (비동기이므로 즉시 완료는 안 되지만 다음 시도에 도움됨)
+        if FileManager.default.isUbiquitousItem(at: url) {
+            try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+        }
+
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            throw PlannerSyncFileError.fileNotAccessible
+        }
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let snapshot = try decoder.decode(PlannerSyncSnapshot.self, from: data)
@@ -347,108 +370,127 @@ struct PlannerSyncFileService {
         }
 
         let existingHistories = try modelContext.fetch(FetchDescriptor<TodoHistory>())
-        let existingTodos = try modelContext.fetch(FetchDescriptor<TodoItem>())
+        let existingTodos     = try modelContext.fetch(FetchDescriptor<TodoItem>())
         let existingDeadlines = try modelContext.fetch(FetchDescriptor<Deadline>())
-        let existingLabels = try modelContext.fetch(FetchDescriptor<PlannerLabel>())
+        let existingLabels    = try modelContext.fetch(FetchDescriptor<PlannerLabel>())
 
-        for history in existingHistories {
-            modelContext.delete(history)
-        }
-        for todo in existingTodos {
-            modelContext.delete(todo)
-        }
-        for deadline in existingDeadlines {
-            modelContext.delete(deadline)
-        }
-        for label in existingLabels {
-            modelContext.delete(label)
-        }
+        var labelsByID    = Dictionary(existingLabels.map    { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var deadlinesByID = Dictionary(existingDeadlines.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var todosByID     = Dictionary(existingTodos.map     { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let historyByID   = Dictionary(existingHistories.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
-        try modelContext.save()
-
-        var labelsByID: [UUID: PlannerLabel] = [:]
+        // Upsert labels
         for item in snapshot.labels {
-            let label = PlannerLabel(name: item.name, emoji: item.emoji, colorHex: item.colorHex)
-            label.id = item.id
-            modelContext.insert(label)
-            labelsByID[item.id] = label
+            if let existing = labelsByID[item.id] {
+                existing.name     = item.name
+                existing.emoji    = item.emoji
+                existing.colorHex = item.colorHex
+            } else {
+                let label = PlannerLabel(name: item.name, emoji: item.emoji, colorHex: item.colorHex)
+                label.id = item.id
+                modelContext.insert(label)
+                labelsByID[item.id] = label
+            }
         }
 
-        var deadlinesByID: [UUID: Deadline] = [:]
+        // Upsert deadlines (properties first, relationships after todos)
         for item in snapshot.deadlines {
-            let deadline = Deadline(
-                title: item.title,
-                dueDate: item.dueDate,
-                hasTime: item.hasTime,
-                startDate: item.startDate,
-                notes: item.notes,
-                isImportant: item.isImportant,
-                labels: [],
-                links: item.links
-            )
-            deadline.id = item.id
-            deadline.isCompleted = item.isCompleted
-            deadline.calendarEventID = item.calendarEventID
-            deadline.reminderID = item.reminderID
-            modelContext.insert(deadline)
-            deadlinesByID[item.id] = deadline
+            if let existing = deadlinesByID[item.id] {
+                existing.title          = item.title
+                existing.notes          = item.notes
+                existing.dueDate        = item.dueDate
+                existing.hasTime        = item.hasTime
+                existing.startDate      = item.startDate
+                existing.isCompleted    = item.isCompleted
+                existing.isImportant    = item.isImportant
+                existing.calendarEventID = item.calendarEventID
+                existing.reminderID     = item.reminderID
+                existing.links          = item.links
+            } else {
+                let deadline = Deadline(
+                    title: item.title,
+                    dueDate: item.dueDate,
+                    hasTime: item.hasTime,
+                    startDate: item.startDate,
+                    notes: item.notes,
+                    isImportant: item.isImportant,
+                    labels: [],
+                    links: item.links
+                )
+                deadline.id = item.id
+                deadline.isCompleted    = item.isCompleted
+                deadline.calendarEventID = item.calendarEventID
+                deadline.reminderID     = item.reminderID
+                modelContext.insert(deadline)
+                deadlinesByID[item.id] = deadline
+            }
         }
 
-        var todosByID: [UUID: TodoItem] = [:]
+        // Upsert todos
         for item in snapshot.todos {
-            let todo = TodoItem(
-                title: item.title,
-                dueDate: item.dueDate,
-                endDate: item.endDate,
-                hasTime: item.hasTime,
-                notes: item.notes,
-                isImportant: item.isImportant,
-                autoCarryOver: item.autoCarryOver,
-                labels: [],
-                links: item.links
-            )
-            todo.id = item.id
-            todo.isCompleted = item.isCompleted
-            todo.reminderID = item.reminderID
-            modelContext.insert(todo)
-            todosByID[item.id] = todo
+            if let existing = todosByID[item.id] {
+                existing.title        = item.title
+                existing.notes        = item.notes
+                existing.dueDate      = item.dueDate
+                existing.endDate      = item.endDate
+                existing.hasTime      = item.hasTime
+                existing.isCompleted  = item.isCompleted
+                existing.isImportant  = item.isImportant
+                existing.autoCarryOver = item.autoCarryOver
+                existing.reminderID   = item.reminderID
+                existing.links        = item.links
+            } else {
+                let todo = TodoItem(
+                    title: item.title,
+                    dueDate: item.dueDate,
+                    endDate: item.endDate,
+                    hasTime: item.hasTime,
+                    notes: item.notes,
+                    isImportant: item.isImportant,
+                    autoCarryOver: item.autoCarryOver,
+                    labels: [],
+                    links: item.links
+                )
+                todo.id          = item.id
+                todo.isCompleted = item.isCompleted
+                todo.reminderID  = item.reminderID
+                modelContext.insert(todo)
+                todosByID[item.id] = todo
+            }
         }
 
-        var historiesByTodoID: [UUID: [TodoHistory]] = [:]
-        for item in snapshot.histories {
+        // Set relationships after all objects exist
+        for item in snapshot.deadlines {
+            guard let deadline = deadlinesByID[item.id] else { continue }
+            deadline.labels = item.labelIDs.compactMap { labelsByID[$0] }
+        }
+        for item in snapshot.todos {
+            guard let todo = todosByID[item.id] else { continue }
+            todo.labels   = item.labelIDs.compactMap { labelsByID[$0] }
+            todo.deadline = item.deadlineID.flatMap { deadlinesByID[$0] }
+        }
+
+        // Add new history entries only (never delete existing ones)
+        for item in snapshot.histories where historyByID[item.id] == nil {
             let history = TodoHistory(
                 originalDate: item.originalDate,
                 wasCompleted: item.wasCompleted,
                 carriedOverTo: item.carriedOverTo
             )
-            history.id = item.id
-            history.recordedAt = item.recordedAt
+            history.id          = item.id
+            history.recordedAt  = item.recordedAt
             if let todoID = item.todoID, let todo = todosByID[todoID] {
                 history.todo = todo
-                historiesByTodoID[todoID, default: []].append(history)
             }
             modelContext.insert(history)
         }
 
-        for item in snapshot.deadlines {
-            guard let deadline = deadlinesByID[item.id] else { continue }
-            deadline.labels = item.labelIDs.compactMap { labelsByID[$0] }
-        }
-
-        for item in snapshot.todos {
-            guard let todo = todosByID[item.id] else { continue }
-            todo.labels = item.labelIDs.compactMap { labelsByID[$0] }
-            todo.deadline = item.deadlineID.flatMap { deadlinesByID[$0] }
-            todo.history = historiesByTodoID[item.id] ?? []
-        }
-
-        theme.selectedAccentID = snapshot.preferences.selectedAccentID
-        theme.selectedBackgroundID = snapshot.preferences.selectedBackgroundID
-        theme.selectedTodoColorHex = snapshot.preferences.selectedTodoColorHex
+        theme.selectedAccentID        = snapshot.preferences.selectedAccentID
+        theme.selectedBackgroundID    = snapshot.preferences.selectedBackgroundID
+        theme.selectedTodoColorHex    = snapshot.preferences.selectedTodoColorHex
         theme.selectedDeadlineColorHex = snapshot.preferences.selectedDeadlineColorHex
-        theme.languageRaw = snapshot.preferences.languageRaw
-
-        UserDefaults.standard.set(snapshot.preferences.displayName, forKey: "displayName")
+        theme.languageRaw             = snapshot.preferences.languageRaw
+        UserDefaults.standard.set(snapshot.preferences.displayName,         forKey: "displayName")
         UserDefaults.standard.set(snapshot.preferences.notificationsEnabled, forKey: "notificationsEnabled")
 
         try modelContext.save()
