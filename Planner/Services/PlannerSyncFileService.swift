@@ -121,6 +121,26 @@ private struct PlannerSyncSnapshot: Codable {
 
 @MainActor
 struct PlannerSyncFileService {
+    static func defaultLocalFileURL() throws -> URL {
+        let directory = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Sync", isDirectory: true)
+
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        return directory.appendingPathComponent("PlannerSync.json")
+    }
+
+    static func activeSyncFileURL() throws -> URL {
+        if let connected = try PlannerSyncBookmarkStore.resolvedURL() {
+            return connected
+        }
+        return try defaultLocalFileURL()
+    }
+
     static func connectedFileURL() -> URL? {
         try? PlannerSyncBookmarkStore.resolvedURL()
     }
@@ -129,17 +149,29 @@ struct PlannerSyncFileService {
         connectedFileURL()?.lastPathComponent
     }
 
-    static func exportToConnectedFile(modelContext: ModelContext, theme: ThemeManager) throws -> String {
-        guard let url = try PlannerSyncBookmarkStore.resolvedURL() else {
-            throw PlannerSyncFileError.noConnectedFile
+    static func activeSyncFileName() -> String? {
+        try? activeSyncFileURL().lastPathComponent
+    }
+
+    static func ensureActiveSyncFileExists(modelContext: ModelContext, theme: ThemeManager) throws -> String {
+        let url = try activeSyncFileURL()
+        guard !FileManager.default.fileExists(atPath: url.path) else {
+            return url.lastPathComponent
         }
 
         try export(modelContext: modelContext, theme: theme, to: url)
         return url.lastPathComponent
     }
 
+    static func exportToConnectedFile(modelContext: ModelContext, theme: ThemeManager) throws -> String {
+        let url = try activeSyncFileURL()
+        try export(modelContext: modelContext, theme: theme, to: url)
+        return url.lastPathComponent
+    }
+
     static func importFromConnectedFile(modelContext: ModelContext, theme: ThemeManager) throws -> String {
-        guard let url = try PlannerSyncBookmarkStore.resolvedURL() else {
+        let url = try activeSyncFileURL()
+        guard FileManager.default.fileExists(atPath: url.path) else {
             throw PlannerSyncFileError.noConnectedFile
         }
 

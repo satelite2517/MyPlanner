@@ -1,9 +1,6 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-#if os(macOS)
-import AppKit
-#endif
 
 struct MeView: View {
     @Environment(ThemeManager.self) private var theme
@@ -251,21 +248,6 @@ struct MeView: View {
                                 title: str.remindersApp,
                                 status: reminderStatusText ?? (isSyncingReminders ? str.syncing : str.syncNow),
                                 isLoading: isSyncingReminders
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Divider().padding(.leading, 16)
-
-                        Button {
-                            prepareSyncFileExport()
-                        } label: {
-                            integrationSyncRow(
-                                icon: "square.and.arrow.up",
-                                colors: [Color(hex: "5B8DEF"), Color(hex: "3A6BD9")],
-                                title: str.createSyncFile,
-                                status: syncFileStatusText ?? str.syncFileNotConnected,
-                                isLoading: false
                             )
                         }
                         .buttonStyle(.plain)
@@ -573,31 +555,14 @@ struct MeView: View {
     }
 
     private func refreshSyncFileStatus() {
-        syncFileStatusText = PlannerSyncFileService.connectedFileName() ?? str.syncFileNotConnected
-    }
-
-    private func prepareSyncFileExport() {
         do {
-            #if os(macOS)
-            let panel = NSSavePanel()
-            panel.allowedContentTypes = [.json]
-            panel.nameFieldStringValue = "PlannerSync.json"
-            panel.canCreateDirectories = true
-
-            if panel.runModal() == .OK, let url = panel.url {
-                try PlannerSyncFileService.export(modelContext: modelContext, theme: theme, to: url)
-                try PlannerSyncBookmarkStore.save(url: url)
-                refreshSyncFileStatus()
-                syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
-                isShowingSyncAlert = true
-            }
-            #else
-            syncAlertMessage = str.connectSyncFile
-            isShowingSyncAlert = true
-            #endif
+            let fileName = try PlannerSyncFileService.ensureActiveSyncFileExists(
+                modelContext: modelContext,
+                theme: theme
+            )
+            syncFileStatusText = fileName
         } catch {
-            syncAlertMessage = error.localizedDescription
-            isShowingSyncAlert = true
+            syncFileStatusText = str.syncFileNotConnected
         }
     }
 

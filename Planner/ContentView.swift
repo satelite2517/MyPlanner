@@ -46,6 +46,10 @@ struct ContentView: View {
         didRunInitialFileImport = true
 
         do {
+            _ = try PlannerSyncFileService.ensureActiveSyncFileExists(
+                modelContext: modelContext,
+                theme: theme
+            )
             _ = try PlannerSyncFileService.importFromConnectedFile(modelContext: modelContext, theme: theme)
         } catch PlannerSyncFileError.noConnectedFile {
             // Ignore when the user hasn't connected a file yet.
