@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 struct MeView: View {
     @Environment(ThemeManager.self) private var theme
@@ -16,11 +19,9 @@ struct MeView: View {
     @State private var isShowingReminderAlert = false
     @State private var isShowingLabelCreator = false
     @State private var isImportingSyncFile = false
-    @State private var isExportingSyncFile = false
     @State private var syncFileStatusText: String? = nil
     @State private var syncAlertMessage = ""
     @State private var isShowingSyncAlert = false
-    @State private var syncExportDocument = PlannerSyncJSONDocument()
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -389,14 +390,6 @@ struct MeView: View {
         ) { result in
             handleSyncFileImport(result)
         }
-        .fileExporter(
-            isPresented: $isExportingSyncFile,
-            document: syncExportDocument,
-            contentType: .json,
-            defaultFilename: "PlannerSync"
-        ) { result in
-            handleSyncFileExport(result)
-        }
     }
 
     // MARK: - Helpers
@@ -585,24 +578,23 @@ struct MeView: View {
 
     private func prepareSyncFileExport() {
         do {
-            syncExportDocument = try PlannerSyncFileService.makeExportDocument(
-                modelContext: modelContext,
-                theme: theme
-            )
-            isExportingSyncFile = true
-        } catch {
-            syncAlertMessage = error.localizedDescription
-            isShowingSyncAlert = true
-        }
-    }
+            #if os(macOS)
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [.json]
+            panel.nameFieldStringValue = "PlannerSync.json"
+            panel.canCreateDirectories = true
 
-    private func handleSyncFileExport(_ result: Result<URL, Error>) {
-        do {
-            let url = try result.get()
-            try PlannerSyncBookmarkStore.save(url: url)
-            refreshSyncFileStatus()
-            syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
+            if panel.runModal() == .OK, let url = panel.url {
+                try PlannerSyncFileService.export(modelContext: modelContext, theme: theme, to: url)
+                try PlannerSyncBookmarkStore.save(url: url)
+                refreshSyncFileStatus()
+                syncAlertMessage = "\(str.syncCompleted)\n\(url.lastPathComponent)"
+                isShowingSyncAlert = true
+            }
+            #else
+            syncAlertMessage = str.connectSyncFile
             isShowingSyncAlert = true
+            #endif
         } catch {
             syncAlertMessage = error.localizedDescription
             isShowingSyncAlert = true

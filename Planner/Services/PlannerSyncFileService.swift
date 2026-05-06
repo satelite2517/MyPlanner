@@ -1,7 +1,5 @@
 import Foundation
-import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 enum PlannerSyncFileError: LocalizedError {
     case noConnectedFile
@@ -14,24 +12,6 @@ enum PlannerSyncFileError: LocalizedError {
         case .invalidFile:
             return "The selected sync file is invalid."
         }
-    }
-}
-
-struct PlannerSyncJSONDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
-
-    var data: Data
-
-    init(data: Data = Data("{}".utf8)) {
-        self.data = data
-    }
-
-    init(configuration: ReadConfiguration) throws {
-        self.data = configuration.file.regularFileContents ?? Data()
-    }
-
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: data)
     }
 }
 
@@ -149,14 +129,6 @@ struct PlannerSyncFileService {
         connectedFileURL()?.lastPathComponent
     }
 
-    static func makeExportDocument(modelContext: ModelContext, theme: ThemeManager) throws -> PlannerSyncJSONDocument {
-        let snapshot = try makeSnapshot(modelContext: modelContext, theme: theme)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        return PlannerSyncJSONDocument(data: try encoder.encode(snapshot))
-    }
-
     static func exportToConnectedFile(modelContext: ModelContext, theme: ThemeManager) throws -> String {
         guard let url = try PlannerSyncBookmarkStore.resolvedURL() else {
             throw PlannerSyncFileError.noConnectedFile
@@ -184,10 +156,7 @@ struct PlannerSyncFileService {
         }
 
         let snapshot = try makeSnapshot(modelContext: modelContext, theme: theme)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(snapshot)
+        let data = try encodedData(for: snapshot)
         try data.write(to: url, options: .atomic)
     }
 
@@ -204,6 +173,13 @@ struct PlannerSyncFileService {
         decoder.dateDecodingStrategy = .iso8601
         let snapshot = try decoder.decode(PlannerSyncSnapshot.self, from: data)
         try apply(snapshot: snapshot, modelContext: modelContext, theme: theme)
+    }
+
+    private static func encodedData(for snapshot: PlannerSyncSnapshot) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(snapshot)
     }
 
     private static func makeSnapshot(modelContext: ModelContext, theme: ThemeManager) throws -> PlannerSyncSnapshot {

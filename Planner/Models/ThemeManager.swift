@@ -185,12 +185,13 @@ final class ThemeManager {
 
     init() {
         let legacyThemeID = UserDefaults.standard.string(forKey: "appThemeID")
-        selectedAccentID = UserDefaults.standard.string(forKey: "appAccentThemeID")
+        let resolvedAccentID = UserDefaults.standard.string(forKey: "appAccentThemeID")
             ?? legacyThemeID
             ?? "blue"
+        selectedAccentID = resolvedAccentID
         selectedBackgroundID = UserDefaults.standard.string(forKey: "appBackgroundThemeID") ?? "white"
         selectedTodoColorHex = UserDefaults.standard.string(forKey: "appTodoColorHex")
-            ?? (ThemeManager.accentThemes.first { $0.id == selectedAccentID }?.primaryHex ?? "2563EB")
+            ?? (ThemeManager.accentThemes.first { $0.id == resolvedAccentID }?.primaryHex ?? "2563EB")
         selectedDeadlineColorHex = UserDefaults.standard.string(forKey: "appDeadlineColorHex") ?? "16A34A"
         languageRaw = UserDefaults.standard.string(forKey: "appLanguage") ?? "ko"
     }

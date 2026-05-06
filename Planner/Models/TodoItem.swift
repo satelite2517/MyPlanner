@@ -17,7 +17,6 @@ final class TodoItem {
     var links: [String]
 
     // 연결된 마감일 (이 할일이 어떤 deadline의 세부 작업인지)
-    @Relationship(inverse: \Deadline.todos)
     var deadline: Deadline?
 
     // 이 할일의 완료/이월 이력
