@@ -31,13 +31,29 @@ struct ContentView: View {
                 }
         }
         .task {
+            await connectICloudDriveFileIfNeeded()
             await runInitialSyncFileImportIfNeeded()
             await runInitialReminderSyncIfNeeded()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .background else { return }
-            persistConnectedSyncFileIfNeeded()
+            Task {
+                await handleScenePhaseChange(newPhase)
+            }
         }
+    }
+
+    @MainActor
+    private func connectICloudDriveFileIfNeeded() async {
+        #if os(macOS)
+        do {
+            _ = try PlannerSyncFileService.promptToCreateICloudDriveSyncFileIfNeeded(
+                modelContext: modelContext,
+                theme: theme
+            )
+        } catch {
+            // Fall back to the local default sync file if the user cancels or save fails.
+        }
+        #endif
     }
 
     @MainActor
@@ -67,6 +83,33 @@ struct ContentView: View {
             _ = try await ReminderSyncService().syncDeadlines(from: modelContext)
         } catch {
             // Ignore startup sync failures; the manual sync entry point in Me remains available.
+        }
+    }
+
+    @MainActor
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) async {
+        switch newPhase {
+        case .active:
+            guard didRunInitialFileImport else { return }
+            pullFromConnectedSyncFileIfNeeded()
+        case .inactive, .background:
+            persistConnectedSyncFileIfNeeded()
+        @unknown default:
+            break
+        }
+    }
+
+    @MainActor
+    private func pullFromConnectedSyncFileIfNeeded() {
+        do {
+            _ = try PlannerSyncFileService.importFromConnectedFile(
+                modelContext: modelContext,
+                theme: theme
+            )
+        } catch PlannerSyncFileError.noConnectedFile {
+            // Ignore when the user hasn't connected a file yet.
+        } catch {
+            // Ignore foreground pull failures.
         }
     }
 

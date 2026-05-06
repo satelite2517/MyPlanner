@@ -1,5 +1,9 @@
 import Foundation
 import SwiftData
+#if os(macOS)
+import AppKit
+import UniformTypeIdentifiers
+#endif
 
 enum PlannerSyncFileError: LocalizedError {
     case noConnectedFile
@@ -121,6 +125,37 @@ private struct PlannerSyncSnapshot: Codable {
 
 @MainActor
 struct PlannerSyncFileService {
+    #if os(macOS)
+    static func promptToCreateICloudDriveSyncFileIfNeeded(
+        modelContext: ModelContext,
+        theme: ThemeManager
+    ) throws -> String? {
+        guard try PlannerSyncBookmarkStore.resolvedURL() == nil else {
+            return nil
+        }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "PlannerSync.json"
+        panel.canCreateDirectories = true
+        panel.directoryURL = preferredICloudDriveDirectoryURL()
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return nil
+        }
+
+        try export(modelContext: modelContext, theme: theme, to: url)
+        try PlannerSyncBookmarkStore.save(url: url)
+        return url.lastPathComponent
+    }
+
+    private static func preferredICloudDriveDirectoryURL() -> URL? {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs", isDirectory: true)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+    #endif
+
     static func defaultLocalFileURL() throws -> URL {
         let directory = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
