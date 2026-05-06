@@ -24,7 +24,7 @@ enum PlannerSyncBookmarkStore {
 
     static func save(url: URL) throws {
         let bookmark = try url.bookmarkData(
-            options: [.withSecurityScope],
+            options: bookmarkCreationOptions,
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
@@ -39,7 +39,7 @@ enum PlannerSyncBookmarkStore {
         var isStale = false
         let url = try URL(
             resolvingBookmarkData: bookmark,
-            options: [.withSecurityScope],
+            options: bookmarkResolutionOptions,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         )
@@ -53,6 +53,22 @@ enum PlannerSyncBookmarkStore {
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
+    }
+
+    private static var bookmarkCreationOptions: URL.BookmarkCreationOptions {
+        #if os(macOS)
+        return [.withSecurityScope]
+        #else
+        return []
+        #endif
+    }
+
+    private static var bookmarkResolutionOptions: URL.BookmarkResolutionOptions {
+        #if os(macOS)
+        return [.withSecurityScope]
+        #else
+        return []
+        #endif
     }
 }
 
