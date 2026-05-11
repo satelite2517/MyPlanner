@@ -2,16 +2,9 @@ import Foundation
 import SwiftData
 
 enum CarryOverService {
-    private static let lastRunKey = "carryOverLastRunDate"
-
     static func carryOverIfNeeded(modelContext: ModelContext) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-
-        if let lastRun = UserDefaults.standard.object(forKey: lastRunKey) as? Date,
-           calendar.startOfDay(for: lastRun) >= today {
-            return
-        }
 
         do {
             let todos = try modelContext.fetch(FetchDescriptor<TodoItem>())
@@ -49,8 +42,6 @@ enum CarryOverService {
             if didChange {
                 try modelContext.save()
             }
-
-            UserDefaults.standard.set(Date(), forKey: lastRunKey)
         } catch {
             // carry-over는 부가 기능이므로 실패해도 앱 동작에 영향 없음
         }
