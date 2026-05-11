@@ -20,7 +20,7 @@ enum CarryOverService {
             for todo in todos {
                 guard !todo.isCompleted,
                       todo.autoCarryOver,
-                      todo.endDate == nil,
+                      !todo.isMultiDay,
                       calendar.startOfDay(for: todo.dueDate) < today
                 else { continue }
 

@@ -28,6 +28,9 @@ struct ContentView: View {
                     Label(theme.str.meTitle, systemImage: "person.circle")
                 }
         }
+        .onAppear {
+            CarryOverService.carryOverIfNeeded(modelContext: modelContext)
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 CarryOverService.carryOverIfNeeded(modelContext: modelContext)
